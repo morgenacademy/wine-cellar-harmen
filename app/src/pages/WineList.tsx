@@ -190,21 +190,29 @@ export default function WineList() {
 
       {sections.map((section) => (
         <div key={section.section} className="mb-10">
-          {/* ── Section header (centered, with rules) ── */}
-          <div className="mb-6">
-            <hr className="border-stone-300" />
-            <h2 className="text-center text-2xl font-serif tracking-wide py-3">
-              {section.label}
-            </h2>
-            <hr className="border-stone-300" />
-          </div>
+          {section.colors.length === 1 ? (
+            /* Single-color section: just the section name */
+            <div className="mb-6">
+              <hr className="border-stone-300" />
+              <h2 className="text-center text-2xl font-serif tracking-wide py-3">
+                {section.label}
+              </h2>
+              <hr className="border-stone-300" />
+            </div>
+          ) : null}
 
           {section.colors.map((colorGroup) => (
             <div key={colorGroup.color} className="mb-8">
-              {/* ── Color header (large, prominent) ── */}
-              <h3 className="text-2xl font-light text-stone-800 mb-4 ml-1">
-                {colorLabel[colorGroup.color] ?? colorGroup.color}
-              </h3>
+              {section.colors.length > 1 ? (
+                /* Multi-color section: each color gets its own full header */
+                <div className="mb-6">
+                  <hr className="border-stone-300" />
+                  <h2 className="text-center text-2xl font-serif tracking-wide py-3">
+                    {section.label} — {colorLabel[colorGroup.color] ?? colorGroup.color}
+                  </h2>
+                  <hr className="border-stone-300" />
+                </div>
+              ) : null}
 
               {colorGroup.countries.map((countryGroup) => (
                 <div key={countryGroup.country} className="mb-4">
