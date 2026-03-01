@@ -272,14 +272,26 @@ function sortByProducerVintage(groups) {
 
 // ═══════════════════════════════════════════════════
 // STEP 1: CHAMPAGNE SLOT (kolom 2, pos 1, cap 12)
-// Only sparkling + non-alcoholic
+// EXACT list per user: 8 bottles only, rest sparkling → unplaced
 // ═══════════════════════════════════════════════════
-console.log('\n=== PLACING: Champagne slot (don\'t touch) ===');
+console.log('\n=== PLACING: Champagne slot (exact list) ===');
 const champSlot = k2[0].id;
-// Non-alcoholic first, then sparkling — user says keep these together
+// Only these specific wines go in the champagne slot:
+const champagneList = [
+  { match: g => g.wine.name.includes('Blanc de Blancs') && g.wine.producer?.includes('Marion-Bosser') && !g.wine.vintage },
+  { match: g => g.wine.name.includes('Brut Rosé') && g.wine.producer?.includes('Marion-Bosser') },
+  { match: g => g.wine.name.includes('Pruno Nero') || g.wine.name.includes('Lambrusco') },
+  { match: g => g.wine.producer?.includes('Veuve Clicquot') },
+  { match: g => g.wine.producer?.includes('Kupferberg') },
+];
+// Place non-alcoholic (2x Mozero)
 placeWinesInSlots(categories.nonAlcoholic, [champSlot]);
-sortByPriceDesc(categories.sparkling);
-placeWinesInSlots(categories.sparkling, [champSlot]);
+// Place specific sparkling wines
+for (const entry of champagneList) {
+  const found = categories.sparkling.find(g => g.bottles.length > 0 && entry.match(g));
+  if (found) placeWineInSlot(found, champSlot);
+}
+// All remaining sparkling stays unplaced (user believes they're consumed)
 console.log(`  Filled: ${slotUsed[champSlot] || 0}/${k2[0].capacity}`);
 
 // ═══════════════════════════════════════════════════
@@ -484,8 +496,7 @@ placeWinesInSlots(categories.cheapWhiteRose, [k1[1].id]);
 // Remaining sparkling, then cheap white/rosé
 // ═══════════════════════════════════════════════════
 console.log('\n=== PLACING: Koelkast ===');
-const sparklingLeft = categories.sparkling.filter(g => g.bottles.length > 0);
-placeWinesInSlots(sparklingLeft, koel.map(s => s.id));
+// No more sparkling overflow — all remaining sparkling stays unplaced
 // Cheap rosé for the fridge
 const cheapRoseForFridge = categories.cheapWhiteRose.filter(g => g.bottles.length > 0 && g.wine.color === 'rosé');
 placeWinesInSlots(cheapRoseForFridge, koel.map(s => s.id));
@@ -648,6 +659,8 @@ for (const [slotId, count] of Object.entries(slotUsed)) {
     if (c === 'dessert') c = 'white';
     // Treat rosé same as white (can share a box)
     if (c === 'rosé') c = 'white';
+    // Treat sparkling same as white (overflow Sekt among whites is fine)
+    if (c === 'sparkling') c = 'white';
     colors.add(c);
   });
   if (colors.size > 1) {
