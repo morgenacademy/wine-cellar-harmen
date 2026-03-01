@@ -386,7 +386,7 @@ function CsvImport() {
       <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center space-y-3">
         <div className="text-green-800 font-semibold text-lg">Import voltooid!</div>
         <p className="text-green-700 text-sm">
-          {result.wines} wijnen en {result.bottles} flessen ge\u00efmporteerd.
+          {result.wines} wijnen en {result.bottles} flessen geïmporteerd.
         </p>
         <button
           onClick={() => {

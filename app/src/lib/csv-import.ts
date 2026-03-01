@@ -18,7 +18,7 @@ function mapColor(type: string): Wine['color'] {
 
 function parseYear(val: string): number | null {
   const n = parseInt(val)
-  if (isNaN(n) || n >= 9999) return null
+  if (isNaN(n) || n < 1900 || n > new Date().getFullYear() + 10) return null
   return n
 }
 
