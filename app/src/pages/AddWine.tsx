@@ -278,14 +278,22 @@ function ManualForm() {
 
 type ImportStatus = 'idle' | 'previewing' | 'importing' | 'done' | 'error'
 
-type ImportMode = 'replace' | 'add'
+type ImportMode = 'sync' | 'add'
+
+type SyncResult = {
+  newWines: number
+  updatedWines: number
+  addedBottles: number
+  removedBottles: number
+  totalBottles: number
+}
 
 function CsvImport() {
   const [status, setStatus] = useState<ImportStatus>('idle')
   const [preview, setPreview] = useState<ReturnType<typeof parseCellarTrackerCsv>>([])
-  const [importMode, setImportMode] = useState<ImportMode>('replace')
+  const [importMode, setImportMode] = useState<ImportMode>('sync')
   const [progress, setProgress] = useState(0)
-  const [result, setResult] = useState<{ wines: number; bottles: number } | null>(null)
+  const [result, setResult] = useState<SyncResult | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -311,49 +319,116 @@ function CsvImport() {
   async function handleImport() {
     setStatus('importing')
     setProgress(0)
-    let totalWines = 0
-    let totalBottles = 0
+
+    const stats: SyncResult = { newWines: 0, updatedWines: 0, addedBottles: 0, removedBottles: 0, totalBottles: 0 }
 
     try {
-      if (importMode === 'replace') {
-        // Delete all bottles first (FK constraint), then wines
-        const { error: delBottles } = await supabase.from('bottles').delete().gte('added_at', '1970-01-01')
-        if (delBottles) throw delBottles
-        const { error: delWines } = await supabase.from('wines').delete().gte('created_at', '1970-01-01')
-        if (delWines) throw delWines
-      }
-
-      for (let i = 0; i < preview.length; i++) {
-        const item = preview[i]
-
-        // Insert wine
-        const { data: wineData, error: wineError } = await supabase
+      if (importMode === 'sync') {
+        // Smart sync: match by cellartracker_id, preserve placements
+        // 1. Fetch all existing wines with cellartracker_id
+        const { data: existingWines } = await supabase
           .from('wines')
-          .insert(item.wine)
-          .select()
-          .single()
+          .select('id, cellartracker_id')
+        const wineByCtId = new Map<string, string>()
+        for (const w of existingWines ?? []) {
+          if (w.cellartracker_id) wineByCtId.set(w.cellartracker_id, w.id)
+        }
 
-        if (wineError) throw wineError
-        const wine = wineData as Wine
+        for (let i = 0; i < preview.length; i++) {
+          const item = preview[i]
+          const ctId = item.wine.cellartracker_id
+          const existingWineId = ctId ? wineByCtId.get(ctId) : null
 
-        // Insert bottles
-        const bottles = Array.from({ length: item.quantity }, () => ({
-          wine_id: wine.id,
-          slot_id: null,
-        }))
+          if (existingWineId) {
+            // UPDATE existing wine data (preserve id)
+            const { cellartracker_id: _ct, ...updateData } = item.wine
+            await supabase.from('wines').update(updateData).eq('id', existingWineId)
+            stats.updatedWines++
 
-        const { error: bottlesError } = await supabase
-          .from('bottles')
-          .insert(bottles)
+            // Count active bottles for this wine
+            const { count } = await supabase
+              .from('bottles')
+              .select('*', { count: 'exact', head: true })
+              .eq('wine_id', existingWineId)
+              .is('consumed_at', null)
+            const currentCount = count ?? 0
 
-        if (bottlesError) throw bottlesError
+            if (item.quantity > currentCount) {
+              // Need more bottles → add unplaced
+              const toAdd = item.quantity - currentCount
+              const newBottles = Array.from({ length: toAdd }, () => ({
+                wine_id: existingWineId,
+                slot_id: null,
+              }))
+              await supabase.from('bottles').insert(newBottles)
+              stats.addedBottles += toAdd
+            } else if (item.quantity < currentCount) {
+              // Too many bottles → remove (unplaced first, then placed)
+              const toRemove = currentCount - item.quantity
+              const { data: bottles } = await supabase
+                .from('bottles')
+                .select('id, slot_id')
+                .eq('wine_id', existingWineId)
+                .is('consumed_at', null)
+                .order('slot_id', { ascending: true, nullsFirst: true })
+                .limit(toRemove)
+              if (bottles?.length) {
+                await supabase.from('bottles').delete().in('id', bottles.map(b => b.id))
+                stats.removedBottles += bottles.length
+              }
+            }
+            stats.totalBottles += item.quantity
+          } else {
+            // NEW wine → insert
+            const { data: wineData, error: wineError } = await supabase
+              .from('wines')
+              .insert(item.wine)
+              .select()
+              .single()
+            if (wineError) throw wineError
+            const wine = wineData as Wine
+            stats.newWines++
 
-        totalWines++
-        totalBottles += item.quantity
-        setProgress(Math.round(((i + 1) / preview.length) * 100))
+            if (item.quantity > 0) {
+              const bottles = Array.from({ length: item.quantity }, () => ({
+                wine_id: wine.id,
+                slot_id: null,
+              }))
+              await supabase.from('bottles').insert(bottles)
+              stats.addedBottles += item.quantity
+            }
+            stats.totalBottles += item.quantity
+          }
+
+          setProgress(Math.round(((i + 1) / preview.length) * 100))
+        }
+      } else {
+        // Add mode: just insert everything as new
+        for (let i = 0; i < preview.length; i++) {
+          const item = preview[i]
+          const { data: wineData, error: wineError } = await supabase
+            .from('wines')
+            .insert(item.wine)
+            .select()
+            .single()
+          if (wineError) throw wineError
+          const wine = wineData as Wine
+          stats.newWines++
+
+          if (item.quantity > 0) {
+            const bottles = Array.from({ length: item.quantity }, () => ({
+              wine_id: wine.id,
+              slot_id: null,
+            }))
+            await supabase.from('bottles').insert(bottles)
+            stats.addedBottles += item.quantity
+          }
+          stats.totalBottles += item.quantity
+          setProgress(Math.round(((i + 1) / preview.length) * 100))
+        }
       }
 
-      setResult({ wines: totalWines, bottles: totalBottles })
+      setResult(stats)
       setStatus('done')
     } catch (err: unknown) {
       setError((err as ErrorWithMessage).message ?? 'Import mislukt')
@@ -384,10 +459,16 @@ function CsvImport() {
   if (status === 'done' && result) {
     return (
       <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center space-y-3">
-        <div className="text-green-800 font-semibold text-lg">Import voltooid!</div>
-        <p className="text-green-700 text-sm">
-          {result.wines} wijnen en {result.bottles} flessen geïmporteerd.
-        </p>
+        <div className="text-green-800 font-semibold text-lg">
+          {importMode === 'sync' ? 'Synchronisatie voltooid!' : 'Import voltooid!'}
+        </div>
+        <div className="text-green-700 text-sm space-y-1">
+          {result.newWines > 0 && <p>{result.newWines} nieuwe wijnen toegevoegd</p>}
+          {result.updatedWines > 0 && <p>{result.updatedWines} wijnen bijgewerkt</p>}
+          {result.addedBottles > 0 && <p>{result.addedBottles} flessen toegevoegd</p>}
+          {result.removedBottles > 0 && <p>{result.removedBottles} flessen verwijderd</p>}
+          <p className="font-medium mt-2">{result.totalBottles} flessen totaal in import</p>
+        </div>
         <button
           onClick={() => {
             setStatus('idle')
@@ -456,12 +537,12 @@ function CsvImport() {
           {/* Import mode */}
           <div className="flex gap-2 bg-stone-100 rounded-lg p-1">
             <button
-              onClick={() => setImportMode('replace')}
+              onClick={() => setImportMode('sync')}
               className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
-                importMode === 'replace' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'
+                importMode === 'sync' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'
               }`}
             >
-              Vervangen
+              Synchroniseren
             </button>
             <button
               onClick={() => setImportMode('add')}
@@ -473,9 +554,9 @@ function CsvImport() {
             </button>
           </div>
           <p className="text-xs text-stone-400">
-            {importMode === 'replace'
-              ? 'Alle bestaande wijnen en flessen worden verwijderd en vervangen door de import.'
-              : 'Wijnen worden toegevoegd aan de bestaande collectie.'}
+            {importMode === 'sync'
+              ? 'Wijnen worden gematcht op CellarTracker ID. Bestaande plaatsingen blijven behouden. Nieuwe flessen worden ongeplaatst toegevoegd.'
+              : 'Alle wijnen worden als nieuw toegevoegd aan de collectie.'}
           </p>
 
           <div className="flex gap-3">
@@ -483,7 +564,7 @@ function CsvImport() {
               onClick={handleImport}
               className="flex-1 py-3 bg-red-800 text-white font-medium rounded-lg hover:bg-red-900 transition-colors"
             >
-              {importMode === 'replace' ? 'Vervang & importeer' : 'Importeer'}
+              {importMode === 'sync' ? 'Synchroniseer' : 'Importeer'}
             </button>
             <button
               onClick={() => {
