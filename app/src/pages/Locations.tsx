@@ -8,7 +8,7 @@ import SlotDetail from '../components/SlotDetail'
 export default function Locations() {
   const { data: locations, isLoading } = useLocations()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>('kast')
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
   const [highlightSlotId, setHighlightSlotId] = useState<string | null>(null)
 
