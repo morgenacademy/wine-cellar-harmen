@@ -3,6 +3,7 @@ import { useLocationWithSlots } from '../hooks/useLocations'
 type Props = {
   locationId: string
   onSlotClick: (slotId: string) => void
+  highlightSlotId?: string | null
 }
 
 const wineColorClass: Record<string, string> = {
@@ -25,7 +26,7 @@ const wineColorBorder: Record<string, string> = {
   other: 'border-stone-400',
 }
 
-export default function RackView({ locationId, onSlotClick }: Props) {
+export default function RackView({ locationId, onSlotClick, highlightSlotId }: Props) {
   const { data, isLoading } = useLocationWithSlots(locationId)
 
   if (isLoading) return <div className="text-stone-500 text-sm py-4">Laden...</div>
@@ -35,19 +36,21 @@ export default function RackView({ locationId, onSlotClick }: Props) {
 
   if (isKoelkast) {
     // Koelkast: horizontal bottle icons (top shelf)
-    return <RekLayout location={data} onSlotClick={onSlotClick} />
+    return <RekLayout location={data} onSlotClick={onSlotClick} highlightSlotId={highlightSlotId} />
   }
 
   // Rek / kistje: vertical list with slot cards
-  return <ListLayout location={data} onSlotClick={onSlotClick} />
+  return <ListLayout location={data} onSlotClick={onSlotClick} highlightSlotId={highlightSlotId} />
 }
 
 function RekLayout({
   location,
   onSlotClick,
+  highlightSlotId,
 }: {
   location: { name: string; slots: any[] }
   onSlotClick: (slotId: string) => void
+  highlightSlotId?: string | null
 }) {
   const slots = location.slots ?? []
 
@@ -67,7 +70,9 @@ function RekLayout({
             <button
               key={slot.id}
               onClick={() => onSlotClick(slot.id)}
-              className="flex-shrink-0 flex flex-col items-center gap-1 group"
+              className={`flex-shrink-0 flex flex-col items-center gap-1 group ${
+                slot.id === highlightSlotId ? 'ring-2 ring-red-800/50 rounded-lg animate-pulse' : ''
+              }`}
             >
               {/* Bottle shape */}
               <div
@@ -111,9 +116,11 @@ function RekLayout({
 function ListLayout({
   location,
   onSlotClick,
+  highlightSlotId,
 }: {
   location: { name: string; type: string; slots: any[] }
   onSlotClick: (slotId: string) => void
+  highlightSlotId?: string | null
 }) {
   const slots = location.slots ?? []
 
@@ -132,7 +139,11 @@ function ListLayout({
             <button
               key={slot.id}
               onClick={() => onSlotClick(slot.id)}
-              className="w-full text-left bg-white rounded-lg p-3 shadow-sm border border-stone-200 transition-shadow hover:shadow-md hover:border-stone-300 active:scale-[0.99]"
+              className={`w-full text-left bg-white rounded-lg p-3 shadow-sm border transition-all hover:shadow-md hover:border-stone-300 active:scale-[0.99] ${
+                slot.id === highlightSlotId
+                  ? 'border-red-800 ring-2 ring-red-800/50 animate-pulse'
+                  : 'border-stone-200'
+              }`}
             >
               <div className="flex items-center justify-between">
                 <div>

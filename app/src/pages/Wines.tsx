@@ -51,6 +51,8 @@ export default function Wines() {
   const [colorFilters, setColorFilters] = useState<Set<Wine['color']>>(new Set())
   const [countryFilter, setCountryFilter] = useState<string | undefined>()
   const [regionFilter, setRegionFilter] = useState<string | undefined>()
+  const [varietalFilter, setVarietalFilter] = useState<string | undefined>()
+  const [appellationFilter, setAppellationFilter] = useState<string | undefined>()
   const [sortBy, setSortBy] = useState<SortOption>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
@@ -60,15 +62,21 @@ export default function Wines() {
     region: regionFilter,
   })
 
-  // Client-side color multi-filter
+  // Client-side filters (color multi-select, varietal, appellation)
   const filteredWines = useMemo(() => {
     if (!allWines) return []
     let result = allWines
     if (colorFilters.size > 0) {
       result = result.filter((w) => colorFilters.has(w.color))
     }
+    if (varietalFilter) {
+      result = result.filter((w) => w.varietal === varietalFilter)
+    }
+    if (appellationFilter) {
+      result = result.filter((w) => w.appellation === appellationFilter)
+    }
     return result
-  }, [allWines, colorFilters])
+  }, [allWines, colorFilters, varietalFilter, appellationFilter])
 
   // Client-side sorting
   const wines = useMemo(() => {
@@ -100,7 +108,7 @@ export default function Wines() {
     return sorted
   }, [filteredWines, sortBy, sortDir])
 
-  // Extract unique countries and regions for filter dropdowns
+  // Extract unique values for filter dropdowns
   const { data: unfilteredWines } = useWines()
   const countries = [...new Set((unfilteredWines ?? []).map((w) => w.country).filter(Boolean))].sort() as string[]
   const regions = [...new Set(
@@ -109,6 +117,8 @@ export default function Wines() {
       .map((w) => w.region)
       .filter(Boolean)
   )].sort() as string[]
+  const varietals = [...new Set((unfilteredWines ?? []).map((w) => w.varietal).filter(Boolean))].sort() as string[]
+  const appellations = [...new Set((unfilteredWines ?? []).map((w) => w.appellation).filter(Boolean))].sort() as string[]
 
   function toggleColor(color: Wine['color']) {
     setColorFilters((prev) => {
@@ -130,6 +140,22 @@ export default function Wines() {
     const active = wine.bottles.filter((b) => !b.consumed_at && b.slot_id)
     if (active.length === 0) return 'Niet geplaatst'
     return `${active.length} fles${active.length > 1 ? 'sen' : ''} opgeslagen`
+  }
+
+  /** Extra info line based on current sort */
+  function getSortInfo(wine: WineWithBottles): string | null {
+    switch (sortBy) {
+      case 'varietal':
+        return wine.varietal || null
+      case 'drink_window':
+        if (wine.drink_from || wine.drink_until)
+          return `Drinken: ${wine.drink_from ?? '?'} – ${wine.drink_until ?? '?'}`
+        return null
+      case 'price':
+        return wine.price != null ? `€${wine.price.toFixed(2)}` : null
+      default:
+        return null
+    }
   }
 
   function toggleSortDir() {
@@ -166,7 +192,7 @@ export default function Wines() {
         ))}
       </div>
 
-      {/* Country, region dropdowns + sort */}
+      {/* Filter dropdowns */}
       <div className="flex gap-2 flex-wrap">
         <select
           value={countryFilter ?? ''}
@@ -193,24 +219,47 @@ export default function Wines() {
           ))}
         </select>
 
-        <div className="flex items-center gap-1 ml-auto">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="px-3 py-2 rounded-lg border border-stone-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-red-800/30"
-          >
-            {sortOptions.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
-          <button
-            onClick={toggleSortDir}
-            className="px-2 py-2 rounded-lg border border-stone-300 bg-white text-sm hover:bg-stone-50"
-            title={sortDir === 'asc' ? 'Oplopend' : 'Aflopend'}
-          >
-            {sortDir === 'asc' ? '↑' : '↓'}
-          </button>
-        </div>
+        <select
+          value={varietalFilter ?? ''}
+          onChange={(e) => setVarietalFilter(e.target.value || undefined)}
+          className="px-3 py-2 rounded-lg border border-stone-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-red-800/30"
+        >
+          <option value="">Alle druiven</option>
+          {varietals.map((v) => (
+            <option key={v} value={v}>{v}</option>
+          ))}
+        </select>
+
+        <select
+          value={appellationFilter ?? ''}
+          onChange={(e) => setAppellationFilter(e.target.value || undefined)}
+          className="px-3 py-2 rounded-lg border border-stone-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-red-800/30"
+        >
+          <option value="">Alle appellations</option>
+          {appellations.map((a) => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Sort controls */}
+      <div className="flex items-center gap-1 justify-end">
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as SortOption)}
+          className="px-3 py-2 rounded-lg border border-stone-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-red-800/30"
+        >
+          {sortOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <button
+          onClick={toggleSortDir}
+          className="px-2 py-2 rounded-lg border border-stone-300 bg-white text-sm hover:bg-stone-50"
+          title={sortDir === 'asc' ? 'Oplopend' : 'Aflopend'}
+        >
+          {sortDir === 'asc' ? '↑' : '↓'}
+        </button>
       </div>
 
       {/* Result count */}
@@ -233,33 +282,39 @@ export default function Wines() {
 
       {/* Wine cards */}
       <div className="space-y-2">
-        {wines.map((wine) => (
-          <button
-            key={wine.id}
-            onClick={() => navigate(`/wines/${wine.id}`)}
-            className="w-full text-left bg-white rounded-xl p-4 shadow-sm border border-stone-200 hover:border-red-800/30 transition-colors"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0 flex-1">
-                <div className="font-medium truncate">{wine.name}</div>
-                <div className="text-sm text-stone-500 flex items-center gap-2 mt-0.5">
-                  {wine.vintage && <span>{wine.vintage}</span>}
-                  {wine.producer && <span>&middot; {wine.producer}</span>}
-                  {wine.region && <span>&middot; {wine.region}</span>}
+        {wines.map((wine) => {
+          const sortInfo = getSortInfo(wine)
+          return (
+            <button
+              key={wine.id}
+              onClick={() => navigate(`/wines/${wine.id}`)}
+              className="w-full text-left bg-white rounded-xl p-4 shadow-sm border border-stone-200 hover:border-red-800/30 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium truncate">{wine.name}</div>
+                  <div className="text-sm text-stone-500 flex items-center gap-2 mt-0.5">
+                    {wine.vintage && <span>{wine.vintage}</span>}
+                    {wine.producer && <span>&middot; {wine.producer}</span>}
+                    {wine.region && <span>&middot; {wine.region}</span>}
+                  </div>
+                  {sortInfo && (
+                    <div className="text-xs text-red-800/70 font-medium mt-0.5">{sortInfo}</div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colorBadge[wine.color]}`}>
+                    {colorLabel[wine.color]}
+                  </span>
+                  <span className="bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                    {getActiveBottles(wine)}
+                  </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colorBadge[wine.color]}`}>
-                  {colorLabel[wine.color]}
-                </span>
-                <span className="bg-stone-100 text-stone-700 px-2 py-0.5 rounded-full text-xs font-bold">
-                  {getActiveBottles(wine)}
-                </span>
-              </div>
-            </div>
-            <div className="text-xs text-stone-400 mt-1">{getLocationSummary(wine)}</div>
-          </button>
-        ))}
+              <div className="text-xs text-stone-400 mt-1">{getLocationSummary(wine)}</div>
+            </button>
+          )
+        })}
       </div>
     </div>
   )

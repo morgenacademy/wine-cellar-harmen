@@ -4,6 +4,7 @@ import type { Location, SlotWithBottles } from '../types/database'
 type Props = {
   locations: Location[]
   onSlotClick: (slotId: string) => void
+  highlightSlotId?: string | null
 }
 
 const wineColorClass: Record<string, string> = {
@@ -88,10 +89,12 @@ function WineSlotButton({
   slot,
   onSlotClick,
   className,
+  highlight,
 }: {
   slot: SlotWithBottles | undefined
   onSlotClick: (slotId: string) => void
   className: string
+  highlight?: boolean
 }) {
   if (!slot) {
     return (
@@ -118,7 +121,11 @@ function WineSlotButton({
   return (
     <button
       onClick={() => onSlotClick(slot.id)}
-      className={`${className} w-full rounded-md border border-stone-300 bg-white relative overflow-hidden text-left transition-shadow hover:shadow-md hover:border-stone-400 active:scale-[0.98]`}
+      className={`${className} w-full rounded-md border bg-white relative overflow-hidden text-left transition-all hover:shadow-md hover:border-stone-400 active:scale-[0.98] ${
+        highlight
+          ? 'border-red-800 ring-2 ring-red-800/50 animate-pulse'
+          : 'border-stone-300'
+      }`}
     >
       {fillCount > 0 && (
         <div
@@ -152,10 +159,12 @@ function KastColumn({
   location,
   colIndex,
   onSlotClick,
+  highlightSlotId,
 }: {
   location: Location
   colIndex: number
   onSlotClick: (slotId: string) => void
+  highlightSlotId?: string | null
 }) {
   const { data } = useLocationWithSlots(location.id)
   const slots = data?.slots ?? []
@@ -203,6 +212,7 @@ function KastColumn({
               slot={rowSlots[0]}
               onSlotClick={onSlotClick}
               className={height}
+              highlight={rowSlots[0]?.id === highlightSlotId}
             />
           )
         }
@@ -214,11 +224,13 @@ function KastColumn({
                 slot={rowSlots[0]}
                 onSlotClick={onSlotClick}
                 className="flex-1 min-h-0"
+                highlight={rowSlots[0]?.id === highlightSlotId}
               />
               <WineSlotButton
                 slot={rowSlots[1]}
                 onSlotClick={onSlotClick}
                 className="flex-1 min-h-0"
+                highlight={rowSlots[1]?.id === highlightSlotId}
               />
             </div>
           )
@@ -230,7 +242,7 @@ function KastColumn({
   )
 }
 
-export default function KastGrid({ locations, onSlotClick }: Props) {
+export default function KastGrid({ locations, onSlotClick, highlightSlotId }: Props) {
   const sorted = [...locations].sort((a, b) => a.sort_order - b.sort_order)
 
   if (sorted.length === 0) {
@@ -251,6 +263,7 @@ export default function KastGrid({ locations, onSlotClick }: Props) {
             location={loc}
             colIndex={idx}
             onSlotClick={onSlotClick}
+            highlightSlotId={highlightSlotId}
           />
         ))}
       </div>

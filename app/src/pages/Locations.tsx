@@ -10,6 +10,7 @@ export default function Locations() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
+  const [highlightSlotId, setHighlightSlotId] = useState<string | null>(null)
 
   // Handle deep-link from wine detail: ?loc=kast&slot=xyz
   useEffect(() => {
@@ -19,6 +20,10 @@ export default function Locations() {
       setSelectedLocationId(loc)
       if (slot) {
         setSelectedSlotId(slot)
+        setHighlightSlotId(slot)
+        // Remove highlight after 3 seconds
+        const timer = setTimeout(() => setHighlightSlotId(null), 3000)
+        return () => clearTimeout(timer)
       }
       // Clean up URL params
       setSearchParams({}, { replace: true })
@@ -76,12 +81,13 @@ export default function Locations() {
 
       {/* Content area */}
       {selectedLocationId === 'kast' && (
-        <KastGrid locations={kastLocations} onSlotClick={setSelectedSlotId} />
+        <KastGrid locations={kastLocations} onSlotClick={setSelectedSlotId} highlightSlotId={highlightSlotId} />
       )}
       {selectedLocationId && selectedLocationId !== 'kast' && (
         <RackView
           locationId={selectedLocationId}
           onSlotClick={setSelectedSlotId}
+          highlightSlotId={highlightSlotId}
         />
       )}
 
