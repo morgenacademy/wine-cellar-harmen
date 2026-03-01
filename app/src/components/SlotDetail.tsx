@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useConsumeBottle } from '../hooks/useBottles'
-import type { Slot, BottleWithWine, Location } from '../types/database'
+import { useConsumeBottle, useMoveBottle } from '../hooks/useBottles'
+import type { Slot, BottleWithWine, Location, Wine } from '../types/database'
 
 type Props = {
   slotId: string
@@ -19,8 +20,33 @@ const wineColorDot: Record<string, string> = {
   other: 'bg-stone-400',
 }
 
+type UnplacedBottle = {
+  id: string
+  wine_id: string
+  wine: Wine
+}
+
+function useUnplacedBottles() {
+  return useQuery({
+    queryKey: ['unplaced-bottles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bottles')
+        .select('id, wine_id, wine:wines(*)')
+        .is('slot_id', null)
+        .is('consumed_at', null)
+        .order('wine_id')
+      if (error) throw error
+      return data as unknown as UnplacedBottle[]
+    },
+  })
+}
+
 export default function SlotDetail({ slotId, onClose }: Props) {
   const navigate = useNavigate()
+  const [showAddBottle, setShowAddBottle] = useState(false)
+  const [bottleSearch, setBottleSearch] = useState('')
+
   const { data, isLoading } = useQuery({
     queryKey: ['slot-detail', slotId],
     queryFn: async () => {
@@ -36,9 +62,40 @@ export default function SlotDetail({ slotId, onClose }: Props) {
   })
 
   const consumeMutation = useConsumeBottle()
+  const moveMutation = useMoveBottle()
+  const { data: unplacedBottles } = useUnplacedBottles()
 
   const activeBottles =
     data?.bottles.filter((b) => !b.consumed_at) ?? []
+  const spotsLeft = (data?.capacity ?? 0) - activeBottles.length
+
+  // Group unplaced bottles by wine for cleaner display
+  const groupedUnplaced = (() => {
+    if (!unplacedBottles) return []
+    const map = new Map<string, { wine: Wine; bottles: { id: string }[] }>()
+    for (const b of unplacedBottles) {
+      if (!map.has(b.wine_id)) {
+        map.set(b.wine_id, { wine: b.wine, bottles: [] })
+      }
+      map.get(b.wine_id)!.bottles.push({ id: b.id })
+    }
+    let result = [...map.values()]
+    if (bottleSearch) {
+      const q = bottleSearch.toLowerCase()
+      result = result.filter(
+        (g) =>
+          g.wine.name.toLowerCase().includes(q) ||
+          g.wine.producer?.toLowerCase().includes(q) ||
+          g.wine.region?.toLowerCase().includes(q) ||
+          g.wine.varietal?.toLowerCase().includes(q)
+      )
+    }
+    return result.sort((a, b) => a.wine.name.localeCompare(b.wine.name))
+  })()
+
+  function handlePlaceBottle(bottleId: string) {
+    moveMutation.mutate({ bottleId, slotId })
+  }
 
   return (
     <>
@@ -81,7 +138,7 @@ export default function SlotDetail({ slotId, onClose }: Props) {
           </div>
         </div>
 
-        {/* Bottle list */}
+        {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {isLoading && (
             <div className="space-y-3">
@@ -94,12 +151,7 @@ export default function SlotDetail({ slotId, onClose }: Props) {
             </div>
           )}
 
-          {!isLoading && activeBottles.length === 0 && (
-            <p className="text-stone-400 text-sm text-center py-8">
-              Dit vak is leeg.
-            </p>
-          )}
-
+          {/* Current bottles */}
           {!isLoading && activeBottles.length > 0 && (
             <div className="space-y-2">
               {activeBottles.map((bottle) => (
@@ -107,14 +159,11 @@ export default function SlotDetail({ slotId, onClose }: Props) {
                   key={bottle.id}
                   className="flex items-center gap-3 bg-stone-50 rounded-lg p-3 border border-stone-200"
                 >
-                  {/* Color dot */}
                   <span
                     className={`w-3 h-3 rounded-full flex-shrink-0 ${
                       wineColorDot[bottle.wine?.color ?? 'other']
                     }`}
                   />
-
-                  {/* Wine info - clickable */}
                   <button
                     onClick={() => {
                       onClose()
@@ -135,8 +184,6 @@ export default function SlotDetail({ slotId, onClose }: Props) {
                         .join(' \u00b7 ')}
                     </div>
                   </button>
-
-                  {/* Consume button */}
                   <button
                     onClick={() => consumeMutation.mutate(bottle.id)}
                     disabled={consumeMutation.isPending}
@@ -148,10 +195,93 @@ export default function SlotDetail({ slotId, onClose }: Props) {
               ))}
             </div>
           )}
+
+          {!isLoading && activeBottles.length === 0 && !showAddBottle && (
+            <p className="text-stone-400 text-sm text-center py-4">
+              Dit vak is leeg.
+            </p>
+          )}
+
+          {/* Add bottle section */}
+          {!isLoading && showAddBottle && (
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-stone-700">Fles plaatsen</h3>
+                <button
+                  onClick={() => { setShowAddBottle(false); setBottleSearch('') }}
+                  className="text-xs text-stone-400 hover:text-stone-600"
+                >
+                  Annuleren
+                </button>
+              </div>
+              <input
+                type="text"
+                placeholder="Zoek op naam, druif, regio..."
+                value={bottleSearch}
+                onChange={(e) => setBottleSearch(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-red-800/30"
+                autoFocus
+              />
+              {groupedUnplaced.length === 0 && (
+                <p className="text-stone-400 text-xs text-center py-4">
+                  Geen ongeplaatste flessen gevonden
+                </p>
+              )}
+              <div className="space-y-1 max-h-60 overflow-y-auto">
+                {groupedUnplaced.map((group) => (
+                  <div
+                    key={group.wine.id}
+                    className="flex items-center gap-3 rounded-lg p-2.5 border border-stone-100 hover:bg-stone-50"
+                  >
+                    <span
+                      className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                        wineColorDot[group.wine.color]
+                      }`}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{group.wine.name}</div>
+                      <div className="text-xs text-stone-500">
+                        {[group.wine.vintage, group.wine.region].filter(Boolean).join(' · ')}
+                        {' · '}{group.bottles.length} fles{group.bottles.length > 1 ? 'sen' : ''}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handlePlaceBottle(group.bottles[0].id)}
+                      disabled={moveMutation.isPending || spotsLeft <= 0}
+                      className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-full bg-green-700 text-white hover:bg-green-800 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                      +1
+                    </button>
+                    {group.bottles.length > 1 && (
+                      <button
+                        onClick={() => {
+                          // Place up to spotsLeft bottles of this wine
+                          const toPlace = group.bottles.slice(0, spotsLeft)
+                          toPlace.forEach((b) => moveMutation.mutate({ bottleId: b.id, slotId }))
+                        }}
+                        disabled={moveMutation.isPending || spotsLeft <= 0}
+                        className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-full bg-green-700 text-white hover:bg-green-800 active:scale-95 transition-all disabled:opacity-50"
+                      >
+                        Alle ({Math.min(group.bottles.length, spotsLeft)})
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Close button */}
-        <div className="px-4 pb-6 pt-2 border-t border-stone-100">
+        {/* Footer buttons */}
+        <div className="px-4 pb-6 pt-2 border-t border-stone-100 space-y-2">
+          {!isLoading && spotsLeft > 0 && !showAddBottle && (
+            <button
+              onClick={() => setShowAddBottle(true)}
+              className="w-full py-2.5 text-sm font-medium text-white bg-green-700 rounded-lg hover:bg-green-800 active:scale-[0.99] transition-all"
+            >
+              + Fles plaatsen ({spotsLeft} plek{spotsLeft > 1 ? 'ken' : ''} vrij)
+            </button>
+          )}
           <button
             onClick={onClose}
             className="w-full py-2.5 text-sm font-medium text-stone-600 bg-stone-100 rounded-lg hover:bg-stone-200 active:scale-[0.99] transition-all"

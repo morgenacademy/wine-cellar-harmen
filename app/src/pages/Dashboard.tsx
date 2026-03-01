@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import { useDashboard } from '../hooks/useDashboard'
 
 const colorMap: Record<string, string> = {
@@ -8,6 +9,7 @@ const colorMap: Record<string, string> = {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate()
   const { data, isLoading } = useDashboard()
 
   if (isLoading) return <div className="p-4">Laden...</div>
@@ -32,10 +34,14 @@ export default function Dashboard() {
           </div>
         ))}
         {data.unplaced > 0 && (
-          <div className="rounded-xl p-4 bg-yellow-100 text-yellow-800">
+          <button
+            onClick={() => navigate('/place')}
+            className="rounded-xl p-4 bg-yellow-100 text-yellow-800 text-left hover:bg-yellow-200 transition-colors"
+          >
             <div className="text-2xl font-bold">{data.unplaced}</div>
             <div className="text-sm">Niet geplaatst</div>
-          </div>
+            <div className="text-xs mt-1 font-medium underline">Snel plaatsen &rarr;</div>
+          </button>
         )}
       </div>
 

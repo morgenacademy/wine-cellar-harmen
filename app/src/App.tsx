@@ -6,6 +6,7 @@ import Locations from './pages/Locations'
 import Wines from './pages/Wines'
 import WineDetail from './pages/WineDetail'
 import AddWine from './pages/AddWine'
+import BulkPlace from './pages/BulkPlace'
 
 const queryClient = new QueryClient()
 const PASS = 'ikhebdorst'
@@ -72,6 +73,7 @@ function App() {
                 <Route path="/wines" element={<Wines />} />
                 <Route path="/wines/:id" element={<WineDetail />} />
                 <Route path="/add" element={<AddWine />} />
+                <Route path="/place" element={<BulkPlace />} />
               </Routes>
             </main>
           </div>
