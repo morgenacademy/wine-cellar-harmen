@@ -25,13 +25,14 @@ export default function RackView({ locationId, onSlotClick }: Props) {
   if (isLoading) return <div className="text-stone-500 text-sm py-4">Laden...</div>
   if (!data) return null
 
-  const isRek = data.type === 'rek'
+  const isKoelkast = data.type === 'koelkast'
 
-  if (isRek) {
+  if (isKoelkast) {
+    // Koelkast: horizontal bottle icons (top shelf)
     return <RekLayout location={data} onSlotClick={onSlotClick} />
   }
 
-  // Koelkast / kistje: simple list
+  // Rek / kistje: vertical list with slot cards
   return <ListLayout location={data} onSlotClick={onSlotClick} />
 }
 
