@@ -8,6 +8,9 @@ const colorOptions: { value: Wine['color']; label: string; className: string }[]
   { value: 'red', label: 'Rood', className: 'bg-red-700 text-white' },
   { value: 'white', label: 'Wit', className: 'bg-amber-300 text-amber-900' },
   { value: 'rosé', label: 'Ros\u00e9', className: 'bg-pink-400 text-white' },
+  { value: 'sparkling', label: 'Mousseux', className: 'bg-yellow-300 text-yellow-900' },
+  { value: 'dessert', label: 'Dessert', className: 'bg-amber-500 text-white' },
+  { value: 'fortified', label: 'Versterkt', className: 'bg-amber-800 text-white' },
   { value: 'other', label: 'Overig', className: 'bg-stone-400 text-white' },
 ]
 
@@ -15,6 +18,9 @@ const colorBadge: Record<Wine['color'], string> = {
   red: 'bg-red-700 text-white',
   white: 'bg-amber-300 text-amber-900',
   'rosé': 'bg-pink-400 text-white',
+  sparkling: 'bg-yellow-300 text-yellow-900',
+  dessert: 'bg-amber-500 text-white',
+  fortified: 'bg-amber-800 text-white',
   other: 'bg-stone-400 text-white',
 }
 
@@ -22,6 +28,9 @@ const colorLabel: Record<Wine['color'], string> = {
   red: 'Rood',
   white: 'Wit',
   'rosé': 'Ros\u00e9',
+  sparkling: 'Mousseux',
+  dessert: 'Dessert / Zoet',
+  fortified: 'Versterkt',
   other: 'Overig',
 }
 

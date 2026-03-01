@@ -5,8 +5,11 @@ type CsvImportResult = {
   quantity: number
 }
 
-function mapColor(color: string): Wine['color'] {
-  const lower = color.toLowerCase()
+function mapColor(type: string): Wine['color'] {
+  const lower = type.toLowerCase()
+  if (lower.includes('sparkling')) return 'sparkling'
+  if (lower.includes('sweet') || lower.includes('dessert')) return 'dessert'
+  if (lower.includes('fortified')) return 'fortified'
   if (lower.includes('rosé') || lower.includes('rose')) return 'rosé'
   if (lower.includes('red')) return 'red'
   if (lower.includes('white')) return 'white'
@@ -52,7 +55,7 @@ export function parseCellarTrackerCsv(csvText: string): CsvImportResult[] {
         name: row['Wine'] ?? '',
         producer: row['Producer'] || null,
         vintage: parseYear(row['Vintage']),
-        color: mapColor(row['Color'] ?? ''),
+        color: mapColor(row['Type'] ?? row['Color'] ?? ''),
         country: row['Country'] || null,
         region: row['Region'] || null,
         subregion: row['SubRegion'] !== 'Unknown' ? row['SubRegion'] : null,
@@ -62,6 +65,7 @@ export function parseCellarTrackerCsv(csvText: string): CsvImportResult[] {
         drink_from: parseYear(row['BeginConsume']),
         drink_until: parseYear(row['EndConsume']),
         price: parsePrice(row['Price']),
+        shop: null,
         notes: null,
         cellartracker_id: row['iWine'] || null,
       },

@@ -10,6 +10,9 @@ const wineColorClass: Record<string, string> = {
   red: 'bg-red-700',
   white: 'bg-amber-300',
   rosé: 'bg-pink-400',
+  sparkling: 'bg-yellow-300',
+  dessert: 'bg-amber-500',
+  fortified: 'bg-amber-800',
   other: 'bg-stone-400',
 }
 

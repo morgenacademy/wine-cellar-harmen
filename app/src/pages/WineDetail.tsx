@@ -11,6 +11,9 @@ const colorBadge: Record<Wine['color'], string> = {
   red: 'bg-red-700 text-white',
   white: 'bg-amber-300 text-amber-900',
   'rosé': 'bg-pink-400 text-white',
+  sparkling: 'bg-yellow-300 text-yellow-900',
+  dessert: 'bg-amber-500 text-white',
+  fortified: 'bg-amber-800 text-white',
   other: 'bg-stone-400 text-white',
 }
 
@@ -18,6 +21,9 @@ const colorLabel: Record<Wine['color'], string> = {
   red: 'Rood',
   white: 'Wit',
   'rosé': 'Ros\u00e9',
+  sparkling: 'Mousseux',
+  dessert: 'Dessert / Zoet',
+  fortified: 'Versterkt',
   other: 'Overig',
 }
 
@@ -149,6 +155,12 @@ export default function WineDetail() {
             <>
               <span className="text-stone-500">Prijs</span>
               <span>&euro;{w.price.toFixed(2)}</span>
+            </>
+          )}
+          {w.shop && (
+            <>
+              <span className="text-stone-500">Shop</span>
+              <span>{w.shop}</span>
             </>
           )}
         </div>

@@ -20,7 +20,7 @@ export type Wine = {
   name: string
   producer: string | null
   vintage: number | null
-  color: 'red' | 'white' | 'rosé' | 'other'
+  color: 'red' | 'white' | 'rosé' | 'sparkling' | 'dessert' | 'fortified' | 'other'
   country: string | null
   region: string | null
   subregion: string | null
@@ -30,6 +30,7 @@ export type Wine = {
   drink_from: number | null
   drink_until: number | null
   price: number | null
+  shop: string | null
   notes: string | null
   cellartracker_id: string | null
 }

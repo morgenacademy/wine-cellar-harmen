@@ -14,6 +14,9 @@ const colorOptions: { value: Wine['color']; label: string }[] = [
   { value: 'red', label: 'Rood' },
   { value: 'white', label: 'Wit' },
   { value: 'rosé', label: 'Ros\u00e9' },
+  { value: 'sparkling', label: 'Mousseux' },
+  { value: 'dessert', label: 'Dessert / Zoet' },
+  { value: 'fortified', label: 'Versterkt' },
   { value: 'other', label: 'Overig' },
 ]
 
@@ -61,6 +64,7 @@ function ManualForm() {
   const [country, setCountry] = useState('')
   const [region, setRegion] = useState('')
   const [varietal, setVarietal] = useState('')
+  const [shop, setShop] = useState('')
   const [quantity, setQuantity] = useState('1')
   const [price, setPrice] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -90,6 +94,7 @@ function ManualForm() {
         drink_from: null,
         drink_until: null,
         price: price ? parseFloat(price) : null,
+        shop: shop.trim() || null,
         notes: null,
         cellartracker_id: null,
       })
@@ -127,6 +132,7 @@ function ManualForm() {
               setCountry('')
               setRegion('')
               setVarietal('')
+              setShop('')
               setQuantity('1')
               setPrice('')
             }}
@@ -170,7 +176,7 @@ function ManualForm() {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Jaargang</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Vintage</label>
           <input
             type="number"
             value={vintage}
@@ -180,7 +186,7 @@ function ManualForm() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Kleur</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Categorie</label>
           <select
             value={color}
             onChange={(e) => setColor(e.target.value as Wine['color'])}
@@ -224,6 +230,17 @@ function ManualForm() {
         />
       </div>
 
+      <div>
+        <label className="block text-sm font-medium text-stone-700 mb-1">Shop</label>
+        <input
+          type="text"
+          value={shop}
+          onChange={(e) => setShop(e.target.value)}
+          placeholder="Waar gekocht"
+          className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-red-800/30 focus:border-red-800"
+        />
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-sm font-medium text-stone-700 mb-1">Aantal flessen</label>
@@ -236,7 +253,7 @@ function ManualForm() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-stone-700 mb-1">Prijs</label>
+          <label className="block text-sm font-medium text-stone-700 mb-1">Prijs per fles</label>
           <input
             type="number"
             value={price}
@@ -337,6 +354,9 @@ function CsvImport() {
     red: 'bg-red-700 text-white',
     white: 'bg-amber-300 text-amber-900',
     'rosé': 'bg-pink-400 text-white',
+    sparkling: 'bg-yellow-300 text-yellow-900',
+    dessert: 'bg-amber-500 text-white',
+    fortified: 'bg-amber-800 text-white',
     other: 'bg-stone-400 text-white',
   }
 
@@ -344,6 +364,9 @@ function CsvImport() {
     red: 'Rood',
     white: 'Wit',
     'rosé': 'Ros\u00e9',
+    sparkling: 'Mousseux',
+    dessert: 'Dessert / Zoet',
+    fortified: 'Versterkt',
     other: 'Overig',
   }
 
