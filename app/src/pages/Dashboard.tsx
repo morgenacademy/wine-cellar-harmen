@@ -63,7 +63,11 @@ export default function Dashboard() {
           {Object.entries(stats.colorCounts)
             .sort((a, b) => b[1] - a[1])
             .map(([color, count]) => (
-              <div key={color} className="flex items-center gap-3">
+              <button
+                key={color}
+                onClick={() => navigate(`/wines?color=${encodeURIComponent(color)}`)}
+                className="w-full flex items-center gap-3 hover:bg-stone-50 rounded-lg px-1 -mx-1 py-0.5 transition-colors"
+              >
                 <span className="text-xs text-stone-500 w-20 text-right">
                   {wineColorLabel[color] ?? color}
                 </span>
@@ -74,7 +78,7 @@ export default function Dashboard() {
                   />
                 </div>
                 <span className="text-xs font-medium text-stone-700 w-8">{count}</span>
-              </div>
+              </button>
             ))}
         </div>
       </div>

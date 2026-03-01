@@ -7,6 +7,7 @@ import Wines from './pages/Wines'
 import WineDetail from './pages/WineDetail'
 import AddWine from './pages/AddWine'
 import BulkPlace from './pages/BulkPlace'
+import WineList from './pages/WineList'
 
 const queryClient = new QueryClient()
 const PASS = 'ikhebdorst'
@@ -63,6 +64,7 @@ function App() {
             <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 flex justify-around py-2 md:static md:border-b md:border-t-0">
               <NavLink to="/" className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Dashboard</NavLink>
               <NavLink to="/wines" className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Wijnen</NavLink>
+              <NavLink to="/winelist" className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Lijst</NavLink>
               <NavLink to="/locations" className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Locaties</NavLink>
               <NavLink to="/add" className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Toevoegen</NavLink>
             </nav>
@@ -73,6 +75,7 @@ function App() {
                 <Route path="/wines" element={<Wines />} />
                 <Route path="/wines/:id" element={<WineDetail />} />
                 <Route path="/add" element={<AddWine />} />
+                <Route path="/winelist" element={<WineList />} />
                 <Route path="/place" element={<BulkPlace />} />
               </Routes>
             </main>

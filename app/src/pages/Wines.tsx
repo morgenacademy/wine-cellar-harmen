@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useWines } from '../hooks/useWines'
 import type { WineWithBottles } from '../hooks/useWines'
 import type { Wine } from '../types/database'
@@ -47,8 +47,12 @@ const sortOptions: { value: SortOption; label: string }[] = [
 
 export default function Wines() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [search, setSearch] = useState('')
-  const [colorFilters, setColorFilters] = useState<Set<Wine['color']>>(new Set())
+  const [colorFilters, setColorFilters] = useState<Set<Wine['color']>>(() => {
+    const c = searchParams.get('color') as Wine['color'] | null
+    return c ? new Set([c]) : new Set()
+  })
   const [countryFilter, setCountryFilter] = useState<string | undefined>()
   const [regionFilter, setRegionFilter] = useState<string | undefined>()
   const [varietalFilter, setVarietalFilter] = useState<string | undefined>()

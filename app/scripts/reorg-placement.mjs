@@ -239,9 +239,25 @@ const gang = getSlots('Gang rek');
 const koel = getSlots('Koelkast');
 const kistje = getSlots('Kistje Brunello');
 
+// Helper: estimate price for wines without a recorded price
+function estimatePrice(wine) {
+  if (wine.price) return wine.price;
+  const name = (wine.name || '').toLowerCase();
+  if (name.includes('barolo')) return 45;
+  if (name.includes('barbaresco')) return 45;
+  if (name.includes('amarone')) return 40;
+  if (name.includes('châteauneuf') || name.includes('chateauneuf')) return 30;
+  if (name.includes('ornellaia') || name.includes('le volte')) return 25;
+  if (name.includes('ripasso')) return 15;
+  if (name.includes('chianti classico')) return 15;
+  if (name.includes('gran selezione')) return 40;
+  if (name.includes('riserva')) return 20;
+  return 10; // default for unknown
+}
+
 // Helper: sort by price desc within a category
 function sortByPriceDesc(groups) {
-  return groups.sort((a, b) => (b.wine.price || 0) - (a.wine.price || 0));
+  return groups.sort((a, b) => estimatePrice(b.wine) - estimatePrice(a.wine));
 }
 
 // Helper: sort by producer then vintage
@@ -258,11 +274,12 @@ function sortByProducerVintage(groups) {
 // STEP 1: CHAMPAGNE SLOT (kolom 2, pos 1, cap 12)
 // Only sparkling + non-alcoholic
 // ═══════════════════════════════════════════════════
-console.log('\n=== PLACING: Champagne slot ===');
+console.log('\n=== PLACING: Champagne slot (don\'t touch) ===');
 const champSlot = k2[0].id;
+// Non-alcoholic first, then sparkling — user says keep these together
+placeWinesInSlots(categories.nonAlcoholic, [champSlot]);
 sortByPriceDesc(categories.sparkling);
 placeWinesInSlots(categories.sparkling, [champSlot]);
-placeWinesInSlots(categories.nonAlcoholic, [champSlot]);
 console.log(`  Filled: ${slotUsed[champSlot] || 0}/${k2[0].capacity}`);
 
 // ═══════════════════════════════════════════════════
@@ -341,10 +358,10 @@ if (brunelloLeft.length > 0) {
 }
 
 // ═══════════════════════════════════════════════════
-// STEP 4: KOLOM 3 OVERFLOW → Amarone, Piemonte, Other Italian Red
+// STEP 4: KOLOM 3 OVERFLOW → Amarone, Piemonte
 // These are quality Italian reds that belong near Brunello
 // ═══════════════════════════════════════════════════
-console.log('\n=== PLACING: Kolom 3 overflow - Italian reds ===');
+console.log('\n=== PLACING: Kolom 3 overflow - Amarone/Piemonte ===');
 const k3overflow = [k3[4].id, k3[5].id, k3[6].id].filter(id => slotRoom(id) > 0);
 sortByPriceDesc(categories.amarone);
 placeWinesInSlots(categories.amarone, k3overflow);
@@ -352,7 +369,7 @@ sortByPriceDesc(categories.piemonte);
 placeWinesInSlots(categories.piemonte, k3overflow);
 
 // ═══════════════════════════════════════════════════
-// STEP 5: KOLOM 2 - FRENCH + WHITE
+// STEP 5: KOLOM 2 - FRENCH + WHITE + ROSÉ
 // pos 2 (8), pos 3 (5) = French red
 // pos 4 (8) = Forges white (grouped)
 // pos 5 (8) = French white (Loire, Burgundy, etc.)
@@ -385,15 +402,25 @@ if (frWhiteLeft.length > 0) {
 }
 
 // ═══════════════════════════════════════════════════
+// STEP 5b: ROSÉ (non-cheap) → 5-bottle position in kast
+// Cheap rosé already in cheapWhiteRose for huiswijn/koelkast
+// ═══════════════════════════════════════════════════
+console.log('\n=== PLACING: Rosé (non-cheap) ===');
+// Use a 5-bottle position: k4 pos 2 (5) or k3 pos 1/4 if there's room
+const roseFiveSlots = [k4[1].id, k3[0].id, k3[3].id].filter(id => slotRoom(id) > 0);
+sortByPriceDesc(categories.rose);
+placeWinesInSlots(categories.rose, roseFiveSlots);
+
+// ═══════════════════════════════════════════════════
 // STEP 6: KOLOM 4 - GERMAN, OTHER, REST
-// pos 1 (12) = German white (quality)
-// pos 2 (5) = German white overflow
-// pos 3 (12) = German white overflow / Other white
-// pos 4 (8) = Italian other red (quality)
-// pos 5 (5) = Italian other red overflow / Piemonte
-// pos 6 (8) = Other red (quality)
-// pos 7 (8) = Mixed overflow
-// pos 8 (12) = Cheap / rest (restbak)
+// pos 1 (12) = German white
+// pos 2 (5) = German white overflow / rosé
+// pos 3 (12) = Other white
+// pos 4 (8) = Italian red (MULTI-BOTTLE ONLY, singles go to rek)
+// pos 5 (5) = Italian red overflow / Amarone/Piemonte overflow
+// pos 6 (8) = German red + other red (quality)
+// pos 7 (8) = White restbak
+// pos 8 (12) = Red restbak
 // ═══════════════════════════════════════════════════
 console.log('\n=== PLACING: Kolom 4 - German white ===');
 const germanWhiteSlots = [k4[0].id, k4[1].id, k4[2].id]; // pos 1,2,3
@@ -401,40 +428,51 @@ sortByPriceDesc(categories.germanWhite);
 placeWinesInSlots(categories.germanWhite, germanWhiteSlots);
 
 console.log('\n=== PLACING: Kolom 4 - Other white ===');
-// Other white in remaining german slots + pos 3
-const otherWhiteSlots = [k4[2].id, k4[1].id]; // fill remaining space
+const otherWhiteSlots = [k4[2].id, k4[1].id];
 sortByPriceDesc(categories.otherWhite);
 placeWinesInSlots(categories.otherWhite, otherWhiteSlots);
 
-console.log('\n=== PLACING: Kolom 4 - Italian red ===');
+console.log('\n=== PLACING: Kolom 4 - Italian red (multi-bottle for kast) ===');
 const italRedSlots = [k4[3].id, k4[4].id]; // pos 4 (8), pos 5 (5)
-sortByPriceDesc(categories.otherItalianRed);
-placeWinesInSlots(categories.otherItalianRed, italRedSlots);
+// Only multi-bottle Italian reds in kast; singles reserved for rek
+const italRedMulti = categories.otherItalianRed.filter(g => g.bottles.length > 1);
+sortByPriceDesc(italRedMulti);
+placeWinesInSlots(italRedMulti, italRedSlots);
 
-// Amarone / Piemonte overflow
-const amaroneLeft = categories.amarone.filter(g => g.bottles.length > 0);
-const piemonteLeft = categories.piemonte.filter(g => g.bottles.length > 0);
+// Amarone / Piemonte overflow (multi-bottle)
+const amaroneLeft = categories.amarone.filter(g => g.bottles.length > 1);
+const piemonteLeft = categories.piemonte.filter(g => g.bottles.length > 1);
+sortByPriceDesc([...amaroneLeft, ...piemonteLeft]);
 placeWinesInSlots([...amaroneLeft, ...piemonteLeft], italRedSlots);
 
-console.log('\n=== PLACING: Kolom 4 - German red ===');
-placeWinesInSlots(categories.germanRed, [k4[5].id]); // pos 6
+console.log('\n=== PLACING: Kolom 4 - German red + other red ===');
+// German red (multi-bottle) in kast
+const germanRedMulti = categories.germanRed.filter(g => g.bottles.length > 1);
+placeWinesInSlots(germanRedMulti, [k4[5].id]);
+// Quality other reds (multi-bottle, or expensive)
+const qualityOtherRedMulti = categories.otherRed.filter(g => g.bottles.length > 1 && estimatePrice(g.wine) >= 10);
+const cheapOtherRed = categories.otherRed.filter(g => estimatePrice(g.wine) < 10);
+sortByPriceDesc(qualityOtherRedMulti);
+placeWinesInSlots(qualityOtherRedMulti, [k4[5].id, k4[3].id, k4[4].id]);
 
-console.log('\n=== PLACING: Kolom 4 - Other red (quality) ===');
-// Quality other reds (€12+) in pos 6
-const qualityOtherRed = categories.otherRed.filter(g => (g.wine.price || 0) >= 12);
-const cheapOtherRed = categories.otherRed.filter(g => (g.wine.price || 0) < 12);
-sortByPriceDesc(qualityOtherRed);
-placeWinesInSlots(qualityOtherRed, [k4[5].id, k4[6].id]);
+// Single-bottle Amarone/Piemonte/French red that didn't fit in kast → try kast overflow
+const amaroneSingles = categories.amarone.filter(g => g.bottles.length === 1);
+const piemonteSingles = categories.piemonte.filter(g => g.bottles.length === 1);
+const frenchRedLeft = categories.frenchRed.filter(g => g.bottles.length > 0);
+// These are quality wines (Barolo, Amarone, Châteauneuf) → squeeze into any red kast slot
+const qualitySinglesForKast = [...amaroneSingles, ...piemonteSingles, ...frenchRedLeft]
+  .filter(g => g.bottles.length > 0 && estimatePrice(g.wine) >= 20);
+sortByPriceDesc(qualitySinglesForKast);
+const anyRedKast = [...k3, k4[3], k4[4], k4[5], k4[7], k2[1], k2[2], k1[0]]
+  .map(s => s.id).filter(id => slotRoom(id) > 0);
+placeWinesInSlots(qualitySinglesForKast, anyRedKast);
 
 // ═══════════════════════════════════════════════════
 // STEP 7: KOLOM 1 - HUISWIJN
-// pos 1 (12) = Huiswijn Rood (Paneretta already placed + cheap red)
-// pos 2 (12) = Huiswijn Wit/Rosé (cheap white/rosé < €8)
 // ═══════════════════════════════════════════════════
 console.log('\n=== PLACING: Kolom 1 - Huiswijn Rood ===');
 sortByPriceDesc(categories.cheapRed);
 placeWinesInSlots(categories.cheapRed, [k1[0].id]);
-// Also overflow cheap other reds here
 placeWinesInSlots(cheapOtherRed, [k1[0].id]);
 
 console.log('\n=== PLACING: Kolom 1 - Huiswijn Wit/Rosé ===');
@@ -442,26 +480,28 @@ sortByPriceDesc(categories.cheapWhiteRose);
 placeWinesInSlots(categories.cheapWhiteRose, [k1[1].id]);
 
 // ═══════════════════════════════════════════════════
-// STEP 8: KOELKAST - cheap white/rosé/sparkling
+// STEP 8: KOELKAST
+// Remaining sparkling, then cheap white/rosé
 // ═══════════════════════════════════════════════════
 console.log('\n=== PLACING: Koelkast ===');
-// Remaining sparkling first
 const sparklingLeft = categories.sparkling.filter(g => g.bottles.length > 0);
 placeWinesInSlots(sparklingLeft, koel.map(s => s.id));
-// Then cheap white/rosé
+// Cheap rosé for the fridge
+const cheapRoseForFridge = categories.cheapWhiteRose.filter(g => g.bottles.length > 0 && g.wine.color === 'rosé');
+placeWinesInSlots(cheapRoseForFridge, koel.map(s => s.id));
+// Then cheap white
 const koelCandidates = [
   ...categories.cheapWhiteRose.filter(g => g.bottles.length > 0),
   ...categories.forgesWhite.filter(g => g.bottles.length > 0),
-  ...categories.frenchWhite.filter(g => g.bottles.length > 0 && (g.wine.price || 99) < 12),
-  ...categories.germanWhite.filter(g => g.bottles.length > 0 && (g.wine.price || 99) < 12),
-  ...categories.otherWhite.filter(g => g.bottles.length > 0 && (g.wine.price || 99) < 12),
-  ...categories.rose.filter(g => g.bottles.length > 0),
-].sort((a, b) => (a.wine.price || 99) - (b.wine.price || 99));
+  ...categories.frenchWhite.filter(g => g.bottles.length > 0 && estimatePrice(g.wine) < 12),
+  ...categories.germanWhite.filter(g => g.bottles.length > 0 && estimatePrice(g.wine) < 12),
+  ...categories.otherWhite.filter(g => g.bottles.length > 0 && estimatePrice(g.wine) < 12),
+].sort((a, b) => estimatePrice(a.wine) - estimatePrice(b.wine));
 placeWinesInSlots(koelCandidates, koel.map(s => s.id));
 
 // ═══════════════════════════════════════════════════
-// STEP 9: WOONKAMER + GANG REK - nice showcase wines
-// Primarily red. Sort by price desc.
+// STEP 9: WOONKAMER + GANG REK
+// Primarily red, middelmatig quality.
 // ═══════════════════════════════════════════════════
 console.log('\n=== PLACING: Woonkamer + Gang rek ===');
 const rekSlotIds = [...wk.map(s => s.id), ...gang.map(s => s.id)];
@@ -477,42 +517,34 @@ function allRemaining() {
   return all;
 }
 
-// PRIMARILY RED: expensive reds first (≥€10), then premium whites/rosé
-// Rek slots are cap 1, so only wines with exactly 1 bottle can go here
-// For 2+ bottle wines: try kast slots instead
-const rekCandidates = allRemaining().filter(g => g.bottles.length === 1);
+// Multi-bottle wines can't go on rek (cap 1) → squeeze into kast first
 const multiBottle = allRemaining().filter(g => g.bottles.length > 1);
-
-// Multi-bottle expensive wines: try to squeeze into color-matching kast slots
-const expensiveMultiRed = multiBottle.filter(g => (g.wine.price || 0) >= 15 && g.wine.color === 'red');
-const expensiveMultiWhite = multiBottle.filter(g => (g.wine.price || 0) >= 15 && g.wine.color !== 'red');
+const expensiveMultiRed = multiBottle.filter(g => g.wine.color === 'red' && estimatePrice(g.wine) >= 10);
+const expensiveMultiWhite = multiBottle.filter(g => g.wine.color !== 'red' && estimatePrice(g.wine) >= 10);
 sortByPriceDesc(expensiveMultiRed);
 sortByPriceDesc(expensiveMultiWhite);
-// Red → kolom 3 (Toscane), kolom 4 red slots, kolom 1 huiswijn rood
 const redKastSlots = [...k3, k4[3], k4[4], k4[5], k4[7], k1[0]]
   .map(s => s.id).filter(id => slotRoom(id) > 0);
 placeWinesInSlots(expensiveMultiRed, redKastSlots);
-// White → kolom 2 white, kolom 4 white slots
 const whiteKastSlots = [k2[3], k2[4], k2[5], k4[0], k4[1], k4[2], k4[6], k1[1]]
   .map(s => s.id).filter(id => slotRoom(id) > 0);
 placeWinesInSlots(expensiveMultiWhite, whiteKastSlots);
 
-// Nice reds on rek (≥€10)
-const niceReds = rekCandidates.filter(g => g.bottles.length === 1 && g.wine.color === 'red' && (g.wine.price || 0) >= 10);
-sortByPriceDesc(niceReds);
-placeWinesInSlots(niceReds, rekSlotIds);
+// RED SINGLES ON REK FIRST (primarily red!)
+const redRekCandidates = allRemaining().filter(g =>
+  g.bottles.length === 1 && g.wine.color === 'red' && estimatePrice(g.wine) >= 8
+);
+sortByPriceDesc(redRekCandidates);
+placeWinesInSlots(redRekCandidates, rekSlotIds);
 
-// Then premium non-red (≥€15)
-const niceOthers = allRemaining().filter(g => g.bottles.length === 1 && (g.wine.price || 0) >= 15);
-sortByPriceDesc(niceOthers);
-placeWinesInSlots(niceOthers, rekSlotIds);
+// Then white/rosé singles on remaining rek spots
+const otherRekCandidates = allRemaining().filter(g =>
+  g.bottles.length === 1 && g.wine.color !== 'red' && estimatePrice(g.wine) >= 10
+);
+sortByPriceDesc(otherRekCandidates);
+placeWinesInSlots(otherRekCandidates, rekSlotIds);
 
-// Then remaining singles by price (≥€10)
-const okRemainder = allRemaining().filter(g => g.bottles.length === 1 && (g.wine.price || 0) >= 10);
-sortByPriceDesc(okRemainder);
-placeWinesInSlots(okRemainder, rekSlotIds);
-
-// Then fill remaining rek with whatever is left that's single-bottle
+// Then fill any remaining rek with whatever single-bottle is left
 const lastResort = allRemaining().filter(g => g.bottles.length === 1);
 sortByPriceDesc(lastResort);
 placeWinesInSlots(lastResort, rekSlotIds);
@@ -521,15 +553,13 @@ placeWinesInSlots(lastResort, rekSlotIds);
 // STEP 10: RESTBAK - everything that's left
 // Kolom 4 pos 7 (8) = white/other restbak
 // Kolom 4 pos 8 (12) = red restbak
-// Then overflow by color into matching slots
 // ═══════════════════════════════════════════════════
 console.log('\n=== PLACING: Restbak (kolom 4 rij 7-8) ===');
 let remaining = allRemaining();
-// Separate by color for restbak
-const restWhite = remaining.filter(g => g.wine.color === 'white' || g.wine.color === 'other' || g.wine.color === 'rosé' || g.wine.color === 'dessert');
+const restWhite = remaining.filter(g => g.wine.color !== 'red');
 const restRed = remaining.filter(g => g.wine.color === 'red');
-placeWinesInSlots(restWhite, [k4[6].id]); // pos 7 = white restbak
-placeWinesInSlots(restRed, [k4[7].id]);   // pos 8 = red restbak
+placeWinesInSlots(restWhite, [k4[6].id]);
+placeWinesInSlots(restRed, [k4[7].id]);
 
 // Overflow: color-matching slots only
 remaining = allRemaining();
@@ -538,9 +568,7 @@ if (remaining.length > 0) {
   console.log(`\n=== OVERFLOW: ${count} bottles remaining ===`);
   const overflowRed = remaining.filter(g => g.wine.color === 'red');
   const overflowNonRed = remaining.filter(g => g.wine.color !== 'red');
-  // Red → red kast slots only
   placeWinesInSlots(overflowRed, [k1[0].id, k4[3].id, k4[4].id, k4[5].id, k4[7].id]);
-  // Non-red → white/rosé kast slots only
   placeWinesInSlots(overflowNonRed, [k1[1].id, k4[0].id, k4[1].id, k4[2].id, k4[6].id]);
 }
 
@@ -618,6 +646,8 @@ for (const [slotId, count] of Object.entries(slotUsed)) {
     if (c === 'other') c = 'sparkling';
     // Treat dessert same as white (both are "wit-achtig")
     if (c === 'dessert') c = 'white';
+    // Treat rosé same as white (can share a box)
+    if (c === 'rosé') c = 'white';
     colors.add(c);
   });
   if (colors.size > 1) {

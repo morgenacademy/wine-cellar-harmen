@@ -54,6 +54,8 @@ export function useMoveBottle() {
       qc.invalidateQueries({ queryKey: ['wine'] })
       qc.invalidateQueries({ queryKey: ['slot-detail'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['unplaced-bottles'] })
+      qc.invalidateQueries({ queryKey: ['slot-options'] })
     },
   })
 }
