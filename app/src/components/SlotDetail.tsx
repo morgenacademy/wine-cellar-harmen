@@ -223,6 +223,9 @@ export default function SlotDetail({ slotId, onClose }: Props) {
                         wineColorDot[group.wine?.color ?? 'other']
                       }`}
                     />
+                    <span className="flex items-center justify-center w-7 h-7 rounded-full bg-stone-200 text-xs font-bold text-stone-700 flex-shrink-0">
+                      {group.bottles.length}
+                    </span>
                     <button
                       onClick={() => {
                         onClose()
@@ -232,11 +235,6 @@ export default function SlotDetail({ slotId, onClose }: Props) {
                     >
                       <div className="font-medium text-sm truncate">
                         {group.wine?.name ?? 'Onbekende wijn'}
-                        {group.bottles.length > 1 && (
-                          <span className="ml-1.5 text-xs font-semibold text-stone-500">
-                            {group.bottles.length}\u00d7
-                          </span>
-                        )}
                       </div>
                       <div className="text-xs text-stone-500">
                         {[
