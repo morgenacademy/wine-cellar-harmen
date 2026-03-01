@@ -209,7 +209,7 @@ export default function WineDetail() {
       {/* Bottles */}
       <div className="space-y-3">
         <h2 className="font-semibold text-lg">
-          Flessen ({activeBottles.length} actief, {consumedBottles.length} gedronken)
+          Flessen ({activeBottles.length} op voorraad{consumedBottles.length > 0 ? `, ${consumedBottles.length} gedronken` : ''})
         </h2>
 
         {/* Active bottles */}

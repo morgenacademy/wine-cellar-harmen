@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useConsumeBottle, useMoveBottle } from '../hooks/useBottles'
+import { useUpdateSlotLabel } from '../hooks/useLocations'
 import type { Slot, BottleWithWine, Location, Wine } from '../types/database'
 
 type Props = {
@@ -46,6 +47,8 @@ export default function SlotDetail({ slotId, onClose }: Props) {
   const navigate = useNavigate()
   const [showAddBottle, setShowAddBottle] = useState(false)
   const [bottleSearch, setBottleSearch] = useState('')
+  const [editingLabel, setEditingLabel] = useState(false)
+  const [labelValue, setLabelValue] = useState('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['slot-detail', slotId],
@@ -63,6 +66,7 @@ export default function SlotDetail({ slotId, onClose }: Props) {
 
   const consumeMutation = useConsumeBottle()
   const moveMutation = useMoveBottle()
+  const updateLabel = useUpdateSlotLabel()
   const { data: unplacedBottles } = useUnplacedBottles()
 
   const activeBottles =
@@ -118,11 +122,59 @@ export default function SlotDetail({ slotId, onClose }: Props) {
             <div>
               {isLoading ? (
                 <div className="h-5 w-32 bg-stone-200 animate-pulse rounded" />
+              ) : editingLabel ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    updateLabel.mutate(
+                      { slotId, label: labelValue.trim() || null },
+                      { onSuccess: () => setEditingLabel(false) }
+                    )
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <input
+                    type="text"
+                    value={labelValue}
+                    onChange={(e) => setLabelValue(e.target.value)}
+                    placeholder={`Plek ${data?.position}`}
+                    className="px-2 py-1 rounded border border-stone-300 text-sm w-40 focus:outline-none focus:ring-2 focus:ring-red-800/30"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    disabled={updateLabel.isPending}
+                    className="px-2 py-1 text-xs font-medium rounded bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
+                  >
+                    {updateLabel.isPending ? '...' : 'OK'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingLabel(false)}
+                    className="px-2 py-1 text-xs text-stone-500 hover:text-stone-700"
+                  >
+                    ✕
+                  </button>
+                </form>
               ) : (
                 <>
-                  <h2 className="text-lg font-bold">
-                    {data?.label ?? `Plek ${data?.position}`}
-                  </h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold">
+                      {data?.label ?? `Plek ${data?.position}`}
+                    </h2>
+                    <button
+                      onClick={() => {
+                        setLabelValue(data?.label ?? '')
+                        setEditingLabel(true)
+                      }}
+                      className="text-stone-400 hover:text-stone-600 transition-colors"
+                      title="Label bewerken"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                        <path d="M2.695 14.763l-1.262 3.154a.5.5 0 00.65.65l3.155-1.262a4 4 0 001.343-.885L17.5 5.5a2.121 2.121 0 00-3-3L3.58 13.42a4 4 0 00-.885 1.343z" />
+                      </svg>
+                    </button>
+                  </div>
                   <p className="text-xs text-stone-500">
                     {data?.location?.name}
                   </p>
@@ -151,50 +203,63 @@ export default function SlotDetail({ slotId, onClose }: Props) {
             </div>
           )}
 
-          {/* Current bottles */}
-          {!isLoading && activeBottles.length > 0 && (
-            <div className="space-y-2">
-              {activeBottles.map((bottle) => (
-                <div
-                  key={bottle.id}
-                  className="flex items-center gap-3 bg-stone-50 rounded-lg p-3 border border-stone-200"
-                >
-                  <span
-                    className={`w-3 h-3 rounded-full flex-shrink-0 ${
-                      wineColorDot[bottle.wine?.color ?? 'other']
-                    }`}
-                  />
-                  <button
-                    onClick={() => {
-                      onClose()
-                      navigate(`/wines/${bottle.wine_id}`)
-                    }}
-                    className="flex-1 min-w-0 text-left hover:text-red-800 transition-colors"
+          {/* Current bottles (grouped by wine) */}
+          {!isLoading && activeBottles.length > 0 && (() => {
+            const grouped = new Map<string, { wine: typeof activeBottles[0]['wine']; bottles: typeof activeBottles }>()
+            activeBottles.forEach((b) => {
+              const key = b.wine_id
+              if (!grouped.has(key)) grouped.set(key, { wine: b.wine, bottles: [] })
+              grouped.get(key)!.bottles.push(b)
+            })
+            return (
+              <div className="space-y-2">
+                {[...grouped.values()].map((group) => (
+                  <div
+                    key={group.bottles[0].id}
+                    className="flex items-center gap-3 bg-stone-50 rounded-lg p-3 border border-stone-200"
                   >
-                    <div className="font-medium text-sm truncate">
-                      {bottle.wine?.name ?? 'Onbekende wijn'}
-                    </div>
-                    <div className="text-xs text-stone-500">
-                      {[
-                        bottle.wine?.vintage,
-                        bottle.wine?.producer,
-                        bottle.wine?.region,
-                      ]
-                        .filter(Boolean)
-                        .join(' \u00b7 ')}
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => consumeMutation.mutate(bottle.id)}
-                    disabled={consumeMutation.isPending}
-                    className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-full bg-red-800 text-white hover:bg-red-900 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {consumeMutation.isPending ? '...' : 'Gedronken'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                    <span
+                      className={`w-3 h-3 rounded-full flex-shrink-0 ${
+                        wineColorDot[group.wine?.color ?? 'other']
+                      }`}
+                    />
+                    <button
+                      onClick={() => {
+                        onClose()
+                        navigate(`/wines/${group.bottles[0].wine_id}`)
+                      }}
+                      className="flex-1 min-w-0 text-left hover:text-red-800 transition-colors"
+                    >
+                      <div className="font-medium text-sm truncate">
+                        {group.wine?.name ?? 'Onbekende wijn'}
+                        {group.bottles.length > 1 && (
+                          <span className="ml-1.5 text-xs font-semibold text-stone-500">
+                            {group.bottles.length}\u00d7
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-stone-500">
+                        {[
+                          group.wine?.vintage,
+                          group.wine?.producer,
+                          group.wine?.region,
+                        ]
+                          .filter(Boolean)
+                          .join(' \u00b7 ')}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => consumeMutation.mutate(group.bottles[0].id)}
+                      disabled={consumeMutation.isPending}
+                      className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-full bg-red-800 text-white hover:bg-red-900 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {consumeMutation.isPending ? '...' : 'Gedronken'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
 
           {!isLoading && activeBottles.length === 0 && !showAddBottle && (
             <p className="text-stone-400 text-sm text-center py-4">

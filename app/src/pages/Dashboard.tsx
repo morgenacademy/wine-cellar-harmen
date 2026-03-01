@@ -1,13 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useDashboard } from '../hooks/useDashboard'
 
-const colorMap: Record<string, string> = {
-  kast: 'bg-amber-100 text-amber-800',
-  rek: 'bg-stone-100 text-stone-800',
-  koelkast: 'bg-blue-100 text-blue-800',
-  kistje: 'bg-red-100 text-red-800',
-}
-
 const wineColorLabel: Record<string, string> = {
   red: 'Rood',
   white: 'Wit',
@@ -48,30 +41,20 @@ export default function Dashboard() {
         {stats.totalValue > 0 && (
           <div className="text-sm text-stone-400 mt-1">
             Totale waarde: €{stats.totalValue.toFixed(0)}
-            {' · '}Gem. €{(stats.totalValue / data.totalBottles).toFixed(2)} per fles
           </div>
         )}
       </div>
 
-      {/* Per location */}
-      <div className="grid grid-cols-2 gap-3">
-        {data.locationCounts.map((loc) => (
-          <div key={loc.name} className={`rounded-xl p-4 ${colorMap[loc.type] ?? 'bg-stone-100'}`}>
-            <div className="text-2xl font-bold">{loc.count}</div>
-            <div className="text-sm">{loc.name}</div>
-          </div>
-        ))}
-        {data.unplaced > 0 && (
-          <button
-            onClick={() => navigate('/place')}
-            className="rounded-xl p-4 bg-yellow-100 text-yellow-800 text-left hover:bg-yellow-200 transition-colors"
-          >
-            <div className="text-2xl font-bold">{data.unplaced}</div>
-            <div className="text-sm">Niet geplaatst</div>
-            <div className="text-xs mt-1 font-medium underline">Snel plaatsen &rarr;</div>
-          </button>
-        )}
-      </div>
+      {/* Unplaced */}
+      {data.unplaced > 0 && (
+        <button
+          onClick={() => navigate('/place')}
+          className="w-full rounded-xl p-4 bg-yellow-100 text-yellow-800 text-left hover:bg-yellow-200 transition-colors"
+        >
+          <div className="text-2xl font-bold">{data.unplaced}</div>
+          <div className="text-sm">flessen nog niet geplaatst</div>
+        </button>
+      )}
 
       {/* Stats: by color */}
       <div className="bg-white rounded-xl p-5 shadow-sm border border-stone-200">

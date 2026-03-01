@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import type { Location, Slot, BottleWithWine } from '../types/database'
 
@@ -37,5 +37,23 @@ export function useLocationWithSlots(locationId: string) {
       return { ...location, slots } as Location & { slots: (Slot & { bottles: BottleWithWine[] })[] }
     },
     enabled: !!locationId,
+  })
+}
+
+export function useUpdateSlotLabel() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: { slotId: string; label: string | null }) => {
+      const { error } = await supabase
+        .from('slots')
+        .update({ label: params.label || null })
+        .eq('id', params.slotId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['location'] })
+      qc.invalidateQueries({ queryKey: ['slot-detail'] })
+      qc.invalidateQueries({ queryKey: ['allSlots'] })
+    },
   })
 }

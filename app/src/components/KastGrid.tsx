@@ -267,7 +267,7 @@ export default function KastGrid({ locations, onSlotClick, highlightSlotId }: Pr
           />
         ))}
       </div>
-      <div className="flex items-center gap-4 mt-3 text-[10px] text-stone-500">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-[10px] text-stone-500">
         <span className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-full bg-red-700" /> Rood
         </span>
@@ -276,6 +276,12 @@ export default function KastGrid({ locations, onSlotClick, highlightSlotId }: Pr
         </span>
         <span className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-full bg-pink-400" /> Ros&eacute;
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-full bg-yellow-300" /> Mousseux
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-full bg-amber-500" /> Dessert
         </span>
         <span className="flex items-center gap-1">
           <span className="w-3 h-3 rounded bg-stone-200" /> Niet-wijn
