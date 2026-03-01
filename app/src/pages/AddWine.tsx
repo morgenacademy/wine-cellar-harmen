@@ -278,9 +278,12 @@ function ManualForm() {
 
 type ImportStatus = 'idle' | 'previewing' | 'importing' | 'done' | 'error'
 
+type ImportMode = 'replace' | 'add'
+
 function CsvImport() {
   const [status, setStatus] = useState<ImportStatus>('idle')
   const [preview, setPreview] = useState<ReturnType<typeof parseCellarTrackerCsv>>([])
+  const [importMode, setImportMode] = useState<ImportMode>('replace')
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<{ wines: number; bottles: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -302,7 +305,7 @@ function CsvImport() {
         setStatus('error')
       }
     }
-    reader.readAsText(file)
+    reader.readAsText(file, 'windows-1252')
   }
 
   async function handleImport() {
@@ -312,6 +315,14 @@ function CsvImport() {
     let totalBottles = 0
 
     try {
+      if (importMode === 'replace') {
+        // Delete all bottles first (FK constraint), then wines
+        const { error: delBottles } = await supabase.from('bottles').delete().gte('added_at', '1970-01-01')
+        if (delBottles) throw delBottles
+        const { error: delWines } = await supabase.from('wines').delete().gte('created_at', '1970-01-01')
+        if (delWines) throw delWines
+      }
+
       for (let i = 0; i < preview.length; i++) {
         const item = preview[i]
 
@@ -442,12 +453,37 @@ function CsvImport() {
             ))}
           </div>
 
+          {/* Import mode */}
+          <div className="flex gap-2 bg-stone-100 rounded-lg p-1">
+            <button
+              onClick={() => setImportMode('replace')}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                importMode === 'replace' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'
+              }`}
+            >
+              Vervangen
+            </button>
+            <button
+              onClick={() => setImportMode('add')}
+              className={`flex-1 py-2 text-sm font-medium rounded-md transition-colors ${
+                importMode === 'add' ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500'
+              }`}
+            >
+              Toevoegen
+            </button>
+          </div>
+          <p className="text-xs text-stone-400">
+            {importMode === 'replace'
+              ? 'Alle bestaande wijnen en flessen worden verwijderd en vervangen door de import.'
+              : 'Wijnen worden toegevoegd aan de bestaande collectie.'}
+          </p>
+
           <div className="flex gap-3">
             <button
               onClick={handleImport}
               className="flex-1 py-3 bg-red-800 text-white font-medium rounded-lg hover:bg-red-900 transition-colors"
             >
-              Importeer
+              {importMode === 'replace' ? 'Vervang & importeer' : 'Importeer'}
             </button>
             <button
               onClick={() => {
