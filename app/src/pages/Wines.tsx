@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useWines } from '../hooks/useWines'
 import type { WineWithBottles } from '../hooks/useWines'
@@ -7,7 +7,7 @@ import type { Wine } from '../types/database'
 const colorOptions: { value: Wine['color']; label: string; className: string }[] = [
   { value: 'red', label: 'Rood', className: 'bg-red-700 text-white' },
   { value: 'white', label: 'Wit', className: 'bg-amber-300 text-amber-900' },
-  { value: 'rosé', label: 'Ros\u00e9', className: 'bg-pink-400 text-white' },
+  { value: 'rosé', label: 'Rosé', className: 'bg-pink-400 text-white' },
   { value: 'sparkling', label: 'Mousseux', className: 'bg-yellow-300 text-yellow-900' },
   { value: 'dessert', label: 'Dessert', className: 'bg-amber-500 text-white' },
   { value: 'fortified', label: 'Versterkt', className: 'bg-amber-800 text-white' },
@@ -27,36 +27,100 @@ const colorBadge: Record<Wine['color'], string> = {
 const colorLabel: Record<Wine['color'], string> = {
   red: 'Rood',
   white: 'Wit',
-  'rosé': 'Ros\u00e9',
+  'rosé': 'Rosé',
   sparkling: 'Mousseux',
   dessert: 'Dessert / Zoet',
   fortified: 'Versterkt',
   other: 'Overig',
 }
 
+type SortOption = 'name' | 'vintage' | 'varietal' | 'region' | 'drink_window' | 'price'
+
+const sortOptions: { value: SortOption; label: string }[] = [
+  { value: 'name', label: 'Naam' },
+  { value: 'vintage', label: 'Vintage' },
+  { value: 'varietal', label: 'Druif' },
+  { value: 'region', label: 'Regio' },
+  { value: 'drink_window', label: 'Drinkvenster' },
+  { value: 'price', label: 'Prijs' },
+]
+
 export default function Wines() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const [colorFilter, setColorFilter] = useState<Wine['color'] | undefined>()
+  const [colorFilters, setColorFilters] = useState<Set<Wine['color']>>(new Set())
   const [countryFilter, setCountryFilter] = useState<string | undefined>()
   const [regionFilter, setRegionFilter] = useState<string | undefined>()
+  const [sortBy, setSortBy] = useState<SortOption>('name')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
-  const { data: wines, isLoading } = useWines({
+  const { data: allWines, isLoading } = useWines({
     search: search || undefined,
-    color: colorFilter,
     country: countryFilter,
     region: regionFilter,
   })
 
+  // Client-side color multi-filter
+  const filteredWines = useMemo(() => {
+    if (!allWines) return []
+    let result = allWines
+    if (colorFilters.size > 0) {
+      result = result.filter((w) => colorFilters.has(w.color))
+    }
+    return result
+  }, [allWines, colorFilters])
+
+  // Client-side sorting
+  const wines = useMemo(() => {
+    const sorted = [...filteredWines]
+    sorted.sort((a, b) => {
+      let cmp = 0
+      switch (sortBy) {
+        case 'name':
+          cmp = a.name.localeCompare(b.name)
+          break
+        case 'vintage':
+          cmp = (a.vintage ?? 0) - (b.vintage ?? 0)
+          break
+        case 'varietal':
+          cmp = (a.varietal ?? '').localeCompare(b.varietal ?? '')
+          break
+        case 'region':
+          cmp = (a.region ?? '').localeCompare(b.region ?? '')
+          break
+        case 'drink_window':
+          cmp = (a.drink_from ?? 9999) - (b.drink_from ?? 9999)
+          break
+        case 'price':
+          cmp = (a.price ?? 0) - (b.price ?? 0)
+          break
+      }
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return sorted
+  }, [filteredWines, sortBy, sortDir])
+
   // Extract unique countries and regions for filter dropdowns
-  const { data: allWines } = useWines()
-  const countries = [...new Set((allWines ?? []).map((w) => w.country).filter(Boolean))].sort() as string[]
+  const { data: unfilteredWines } = useWines()
+  const countries = [...new Set((unfilteredWines ?? []).map((w) => w.country).filter(Boolean))].sort() as string[]
   const regions = [...new Set(
-    (allWines ?? [])
+    (unfilteredWines ?? [])
       .filter((w) => !countryFilter || w.country === countryFilter)
       .map((w) => w.region)
       .filter(Boolean)
   )].sort() as string[]
+
+  function toggleColor(color: Wine['color']) {
+    setColorFilters((prev) => {
+      const next = new Set(prev)
+      if (next.has(color)) {
+        next.delete(color)
+      } else {
+        next.add(color)
+      }
+      return next
+    })
+  }
 
   function getActiveBottles(wine: WineWithBottles): number {
     return wine.bottles.filter((b) => !b.consumed_at).length
@@ -66,6 +130,10 @@ export default function Wines() {
     const active = wine.bottles.filter((b) => !b.consumed_at && b.slot_id)
     if (active.length === 0) return 'Niet geplaatst'
     return `${active.length} fles${active.length > 1 ? 'sen' : ''} opgeslagen`
+  }
+
+  function toggleSortDir() {
+    setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
   }
 
   return (
@@ -81,14 +149,14 @@ export default function Wines() {
         className="w-full px-4 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-red-800/30 focus:border-red-800"
       />
 
-      {/* Color filter chips */}
+      {/* Color filter chips (multi-select) */}
       <div className="flex gap-2 flex-wrap">
         {colorOptions.map((opt) => (
           <button
             key={opt.value}
-            onClick={() => setColorFilter(colorFilter === opt.value ? undefined : opt.value)}
+            onClick={() => toggleColor(opt.value)}
             className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              colorFilter === opt.value
+              colorFilters.has(opt.value)
                 ? opt.className
                 : 'bg-stone-200 text-stone-600 hover:bg-stone-300'
             }`}
@@ -98,8 +166,8 @@ export default function Wines() {
         ))}
       </div>
 
-      {/* Country and region dropdowns */}
-      <div className="flex gap-2">
+      {/* Country, region dropdowns + sort */}
+      <div className="flex gap-2 flex-wrap">
         <select
           value={countryFilter ?? ''}
           onChange={(e) => {
@@ -124,6 +192,25 @@ export default function Wines() {
             <option key={r} value={r}>{r}</option>
           ))}
         </select>
+
+        <div className="flex items-center gap-1 ml-auto">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
+            className="px-3 py-2 rounded-lg border border-stone-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-red-800/30"
+          >
+            {sortOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          <button
+            onClick={toggleSortDir}
+            className="px-2 py-2 rounded-lg border border-stone-300 bg-white text-sm hover:bg-stone-50"
+            title={sortDir === 'asc' ? 'Oplopend' : 'Aflopend'}
+          >
+            {sortDir === 'asc' ? '↑' : '↓'}
+          </button>
+        </div>
       </div>
 
       {/* Result count */}
@@ -146,7 +233,7 @@ export default function Wines() {
 
       {/* Wine cards */}
       <div className="space-y-2">
-        {(wines ?? []).map((wine) => (
+        {wines.map((wine) => (
           <button
             key={wine.id}
             onClick={() => navigate(`/wines/${wine.id}`)}
@@ -158,6 +245,7 @@ export default function Wines() {
                 <div className="text-sm text-stone-500 flex items-center gap-2 mt-0.5">
                   {wine.vintage && <span>{wine.vintage}</span>}
                   {wine.producer && <span>&middot; {wine.producer}</span>}
+                  {wine.region && <span>&middot; {wine.region}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">

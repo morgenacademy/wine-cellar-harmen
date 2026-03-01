@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useConsumeBottle } from '../hooks/useBottles'
 import type { Slot, BottleWithWine, Location } from '../types/database'
@@ -19,6 +20,7 @@ const wineColorDot: Record<string, string> = {
 }
 
 export default function SlotDetail({ slotId, onClose }: Props) {
+  const navigate = useNavigate()
   const { data, isLoading } = useQuery({
     queryKey: ['slot-detail', slotId],
     queryFn: async () => {
@@ -112,8 +114,14 @@ export default function SlotDetail({ slotId, onClose }: Props) {
                     }`}
                   />
 
-                  {/* Wine info */}
-                  <div className="flex-1 min-w-0">
+                  {/* Wine info - clickable */}
+                  <button
+                    onClick={() => {
+                      onClose()
+                      navigate(`/wines/${bottle.wine_id}`)
+                    }}
+                    className="flex-1 min-w-0 text-left hover:text-red-800 transition-colors"
+                  >
                     <div className="font-medium text-sm truncate">
                       {bottle.wine?.name ?? 'Onbekende wijn'}
                     </div>
@@ -126,7 +134,7 @@ export default function SlotDetail({ slotId, onClose }: Props) {
                         .filter(Boolean)
                         .join(' \u00b7 ')}
                     </div>
-                  </div>
+                  </button>
 
                   {/* Consume button */}
                   <button

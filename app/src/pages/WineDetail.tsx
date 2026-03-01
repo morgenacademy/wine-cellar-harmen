@@ -20,7 +20,7 @@ const colorBadge: Record<Wine['color'], string> = {
 const colorLabel: Record<Wine['color'], string> = {
   red: 'Rood',
   white: 'Wit',
-  'rosé': 'Ros\u00e9',
+  'rosé': 'Rosé',
   sparkling: 'Mousseux',
   dessert: 'Dessert / Zoet',
   fortified: 'Versterkt',
@@ -33,13 +33,15 @@ function useAllSlots() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('slots')
-        .select('id, position, label, location:locations(id, name)')
+        .select('id, position, label, location:locations(id, name, type)')
         .order('position')
       if (error) throw error
       return (data ?? []).map((s) => {
-        const loc = s.location as unknown as { id: string; name: string } | null
+        const loc = s.location as unknown as { id: string; name: string; type: string } | null
         return {
           id: s.id,
+          locationId: loc?.id ?? '',
+          locationType: loc?.type ?? '',
           label: loc
             ? `${loc.name} - ${s.label ?? `Positie ${s.position}`}`
             : s.label ?? `Positie ${s.position}`,
@@ -83,6 +85,15 @@ export default function WineDetail() {
     moveBottle.mutate({ bottleId, slotId }, {
       onSuccess: () => setMovingBottleId(null),
     })
+  }
+
+  function navigateToSlot(slotId: string) {
+    // Find the slot info to determine which location to select
+    const slotInfo = allSlots?.find((s) => s.id === slotId)
+    if (slotInfo) {
+      const locParam = slotInfo.locationType === 'kast' ? 'kast' : slotInfo.locationId
+      navigate(`/locations?loc=${locParam}&slot=${slotId}`)
+    }
   }
 
   return (
@@ -208,6 +219,7 @@ export default function WineDetail() {
           const locationStr = location && slot
             ? `${location.name} - ${slot.label ?? `Positie ${slot.position}`}`
             : 'Niet geplaatst'
+          const isPlaced = !!bottle.slot_id
 
           return (
             <div
@@ -216,7 +228,16 @@ export default function WineDetail() {
             >
               <div className="flex items-center justify-between">
                 <div className="text-sm">
-                  <span className="font-medium">{locationStr}</span>
+                  {isPlaced ? (
+                    <button
+                      onClick={() => navigateToSlot(bottle.slot_id!)}
+                      className="font-medium text-red-800 hover:underline"
+                    >
+                      {locationStr}
+                    </button>
+                  ) : (
+                    <span className="font-medium text-stone-400">{locationStr}</span>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <button

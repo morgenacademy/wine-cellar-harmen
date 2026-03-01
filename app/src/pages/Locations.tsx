@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useLocations } from '../hooks/useLocations'
 import KastGrid from '../components/KastGrid'
 import RackView from '../components/RackView'
@@ -6,8 +7,23 @@ import SlotDetail from '../components/SlotDetail'
 
 export default function Locations() {
   const { data: locations, isLoading } = useLocations()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null)
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
+
+  // Handle deep-link from wine detail: ?loc=kast&slot=xyz
+  useEffect(() => {
+    const loc = searchParams.get('loc')
+    const slot = searchParams.get('slot')
+    if (loc) {
+      setSelectedLocationId(loc)
+      if (slot) {
+        setSelectedSlotId(slot)
+      }
+      // Clean up URL params
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   if (isLoading) return <div className="p-4 text-stone-500">Laden...</div>
 
