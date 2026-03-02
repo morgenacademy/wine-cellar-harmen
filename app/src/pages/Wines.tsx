@@ -53,23 +53,42 @@ export default function Wines() {
     const c = searchParams.get('color') as Wine['color'] | null
     return c ? new Set([c]) : new Set()
   })
-  const [countryFilter, setCountryFilter] = useState<string | undefined>()
-  const [regionFilter, setRegionFilter] = useState<string | undefined>()
+  const [countryFilter, setCountryFilter] = useState<string | undefined>(() => {
+    return searchParams.get('country') || undefined
+  })
+  const [regionFilter, setRegionFilter] = useState<string | undefined>(() => {
+    return searchParams.get('region') || undefined
+  })
   const [varietalFilter, setVarietalFilter] = useState<string | undefined>()
   const [appellationFilter, setAppellationFilter] = useState<string | undefined>()
   const [sortBy, setSortBy] = useState<SortOption>('name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   const { data: allWines, isLoading } = useWines({
-    search: search || undefined,
     country: countryFilter,
     region: regionFilter,
   })
 
-  // Client-side filters (color multi-select, varietal, appellation)
+  // Client-side filters (search across all fields, color multi-select, varietal, appellation)
   const filteredWines = useMemo(() => {
     if (!allWines) return []
     let result = allWines
+    // Full-text search across all fields
+    if (search) {
+      const q = search.toLowerCase()
+      result = result.filter((w) =>
+        w.name.toLowerCase().includes(q) ||
+        w.producer?.toLowerCase().includes(q) ||
+        w.region?.toLowerCase().includes(q) ||
+        w.subregion?.toLowerCase().includes(q) ||
+        w.appellation?.toLowerCase().includes(q) ||
+        w.varietal?.toLowerCase().includes(q) ||
+        w.country?.toLowerCase().includes(q) ||
+        w.designation?.toLowerCase().includes(q) ||
+        w.vintage?.toString().includes(q) ||
+        w.notes?.toLowerCase().includes(q)
+      )
+    }
     if (colorFilters.size > 0) {
       result = result.filter((w) => colorFilters.has(w.color))
     }
@@ -80,7 +99,7 @@ export default function Wines() {
       result = result.filter((w) => w.appellation === appellationFilter)
     }
     return result
-  }, [allWines, colorFilters, varietalFilter, appellationFilter])
+  }, [allWines, search, colorFilters, varietalFilter, appellationFilter])
 
   // Client-side sorting
   const wines = useMemo(() => {
@@ -173,7 +192,7 @@ export default function Wines() {
       {/* Search bar */}
       <input
         type="text"
-        placeholder="Zoek op naam..."
+        placeholder="Zoek op naam, druif, regio, vintage..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-full px-4 py-2 rounded-lg border border-stone-300 bg-white focus:outline-none focus:ring-2 focus:ring-red-800/30 focus:border-red-800"

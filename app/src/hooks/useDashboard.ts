@@ -48,8 +48,9 @@ export function useDashboard() {
         countryCounts[c] = (countryCounts[c] ?? 0) + 1
       })
 
-      // Stats: total value
-      const totalValue = bottles.reduce((sum: number, b: any) => sum + (b.wine?.price ?? 0), 0)
+      // Stats: total cost (purchase price) and total value (estimated/market value)
+      const totalCost = bottles.reduce((sum: number, b: any) => sum + (b.wine?.price ?? 0), 0)
+      const totalValue = bottles.reduce((sum: number, b: any) => sum + (b.wine?.estimated_value ?? b.wine?.price ?? 0), 0)
 
       // Stats: average vintage
       const vintages = bottles
@@ -103,6 +104,7 @@ export function useDashboard() {
         stats: {
           colorCounts,
           countryCounts: Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 8),
+          totalCost,
           totalValue,
           avgVintage,
           oldestVintage,

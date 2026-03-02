@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useConsumeBottle, useMoveBottle } from '../hooks/useBottles'
+import { useConsumeBottle, useMoveBottle, useUnplaceBottle } from '../hooks/useBottles'
 import { useUpdateSlotLabel } from '../hooks/useLocations'
 import type { Slot, BottleWithWine, Location, Wine } from '../types/database'
 
@@ -66,6 +66,7 @@ export default function SlotDetail({ slotId, onClose }: Props) {
 
   const consumeMutation = useConsumeBottle()
   const moveMutation = useMoveBottle()
+  const unplaceMutation = useUnplaceBottle()
   const updateLabel = useUpdateSlotLabel()
   const { data: unplacedBottles } = useUnplacedBottles()
 
@@ -245,6 +246,14 @@ export default function SlotDetail({ slotId, onClose }: Props) {
                           .filter(Boolean)
                           .join(' \u00b7 ')}
                       </div>
+                    </button>
+                    <button
+                      onClick={() => unplaceMutation.mutate(group.bottles[0].id)}
+                      disabled={unplaceMutation.isPending}
+                      className="flex-shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-full border border-stone-300 text-stone-600 hover:bg-stone-100 active:scale-95 transition-all disabled:opacity-50"
+                      title="Fles uit dit vak halen"
+                    >
+                      Uit vak
                     </button>
                     <button
                       onClick={() => consumeMutation.mutate(group.bottles[0].id)}

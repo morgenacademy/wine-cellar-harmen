@@ -31,7 +31,7 @@ export function useWines(filters: WineFilters = {}) {
       if (filters.color) query = query.eq('color', filters.color)
       if (filters.country) query = query.eq('country', filters.country)
       if (filters.region) query = query.eq('region', filters.region)
-      if (filters.search) query = query.ilike('name', `%${filters.search}%`)
+      // Search is now done client-side to support all fields
 
       const { data, error } = await query
       if (error) throw error

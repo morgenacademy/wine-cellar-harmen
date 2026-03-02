@@ -148,7 +148,7 @@ export default function BulkPlace() {
   return (
     <div className="space-y-4">
       <button
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/dashboard')}
         className="text-red-800 text-sm font-medium hover:underline"
       >
         &larr; Terug naar dashboard

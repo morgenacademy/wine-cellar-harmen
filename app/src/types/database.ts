@@ -30,6 +30,7 @@ export type Wine = {
   drink_from: number | null
   drink_until: number | null
   price: number | null
+  estimated_value: number | null
   shop: string | null
   notes: string | null
   cellartracker_id: string | null

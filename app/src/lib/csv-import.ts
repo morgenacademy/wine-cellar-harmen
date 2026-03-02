@@ -65,6 +65,7 @@ export function parseCellarTrackerCsv(csvText: string): CsvImportResult[] {
         drink_from: parseYear(row['BeginConsume']),
         drink_until: parseYear(row['EndConsume']),
         price: parsePrice(row['Price']),
+        estimated_value: parsePrice(row['ValRevised']) || parsePrice(row['Value']),
         shop: null,
         notes: null,
         cellartracker_id: row['iWine'] || null,

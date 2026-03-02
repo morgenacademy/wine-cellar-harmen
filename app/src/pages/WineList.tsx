@@ -203,8 +203,8 @@ export default function WineList() {
 
           {section.colors.map((colorGroup) => (
             <div key={colorGroup.color} className="mb-8">
-              {section.colors.length > 1 ? (
-                /* Multi-color section: each color gets its own full header */
+              {section.colors.length > 1 && section.section !== 'sparkling' ? (
+                /* Multi-color section (non-sparkling): each color gets its own full header */
                 <div className="mb-6">
                   <hr className="border-stone-300" />
                   <h2 className="text-center text-2xl font-serif tracking-wide py-3">
@@ -212,6 +212,11 @@ export default function WineList() {
                   </h2>
                   <hr className="border-stone-300" />
                 </div>
+              ) : section.colors.length > 1 && section.section === 'sparkling' ? (
+                /* Sparkling: color as subtle sub-heading, not a full section header */
+                <h4 className="text-sm font-semibold text-stone-500 uppercase tracking-wider mb-2 ml-1">
+                  {colorLabel[colorGroup.color] ?? colorGroup.color}
+                </h4>
               ) : null}
 
               {colorGroup.countries.map((countryGroup) => (

@@ -38,6 +38,28 @@ export function useConsumeBottle() {
   })
 }
 
+export function useUnplaceBottle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (bottleId: string) => {
+      const { error } = await supabase
+        .from('bottles')
+        .update({ slot_id: null })
+        .eq('id', bottleId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['location'] })
+      qc.invalidateQueries({ queryKey: ['wines'] })
+      qc.invalidateQueries({ queryKey: ['wine'] })
+      qc.invalidateQueries({ queryKey: ['slot-detail'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['unplaced-bottles'] })
+      qc.invalidateQueries({ queryKey: ['slot-options'] })
+    },
+  })
+}
+
 export function useMoveBottle() {
   const qc = useQueryClient()
   return useMutation({

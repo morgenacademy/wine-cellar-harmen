@@ -39,8 +39,9 @@ export default function Dashboard() {
         <div className="text-4xl font-bold text-red-800">{data.totalBottles}</div>
         <div className="text-stone-500">flessen in voorraad</div>
         {stats.totalValue > 0 && (
-          <div className="text-sm text-stone-400 mt-1">
-            Totale waarde: €{stats.totalValue.toFixed(0)}
+          <div className="text-sm text-stone-400 mt-1 space-y-0.5">
+            <div>Totale kosten: €{stats.totalCost.toFixed(0)}</div>
+            <div>Geschatte waarde: €{stats.totalValue.toFixed(0)}</div>
           </div>
         )}
       </div>
@@ -89,10 +90,14 @@ export default function Dashboard() {
           <h2 className="font-semibold text-sm mb-2">Top landen</h2>
           <div className="space-y-1">
             {stats.countryCounts.map(([country, count]) => (
-              <div key={country} className="flex justify-between text-sm">
+              <button
+                key={country}
+                onClick={() => navigate(`/wines?country=${encodeURIComponent(country)}`)}
+                className="w-full flex justify-between text-sm hover:bg-stone-50 rounded px-1 -mx-1 py-0.5 transition-colors"
+              >
                 <span className="text-stone-600 truncate">{country}</span>
                 <span className="font-medium text-stone-800">{count}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -100,10 +105,14 @@ export default function Dashboard() {
           <h2 className="font-semibold text-sm mb-2">Top regio's</h2>
           <div className="space-y-1">
             {stats.topRegions.map(([region, count]) => (
-              <div key={region} className="flex justify-between text-sm">
+              <button
+                key={region}
+                onClick={() => navigate(`/wines?region=${encodeURIComponent(region)}`)}
+                className="w-full flex justify-between text-sm hover:bg-stone-50 rounded px-1 -mx-1 py-0.5 transition-colors"
+              >
                 <span className="text-stone-600 truncate">{region}</span>
                 <span className="font-medium text-stone-800">{count}</span>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -154,7 +163,9 @@ export default function Dashboard() {
               >
                 <div className="font-medium">{wine.name}</div>
                 <div className="text-sm text-stone-500">
-                  {wine.vintage} &middot; Drinken voor {wine.drink_until}
+                  {wine.vintage && <span>{wine.vintage} &middot; </span>}
+                  {wine.producer && <span>{wine.producer} &middot; </span>}
+                  Drinken voor {wine.drink_until}
                 </div>
               </button>
             ))}
@@ -170,6 +181,7 @@ export default function Dashboard() {
             {data.recentConsumed.map((bottle: any) => (
               <div key={bottle.id} className="bg-white rounded-lg p-3 shadow-sm border border-stone-200 text-sm">
                 <span className="font-medium">{bottle.wine.name}</span>
+                {bottle.wine.vintage && <span className="text-stone-500 ml-1">{bottle.wine.vintage}</span>}
                 <span className="text-stone-400 ml-2">
                   {new Date(bottle.consumed_at).toLocaleDateString('nl-NL')}
                 </span>

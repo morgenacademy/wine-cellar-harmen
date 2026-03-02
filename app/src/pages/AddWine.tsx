@@ -94,6 +94,7 @@ function ManualForm() {
         drink_from: null,
         drink_until: null,
         price: price ? parseFloat(price) : null,
+        estimated_value: null,
         shop: shop.trim() || null,
         notes: null,
         cellartracker_id: null,
