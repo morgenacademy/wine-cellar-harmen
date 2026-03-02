@@ -208,8 +208,8 @@ export default function WineList() {
 
       {sections.map((section) => (
         <div key={section.section} className="mb-10">
-          {section.colors.length === 1 ? (
-            /* Single-color section: just the section name */
+          {section.colors.length === 1 || section.section === 'sparkling' ? (
+            /* Section header: always for single-color sections and for sparkling */
             <div className="mb-6">
               <hr className="border-stone-300" />
               <h2 className="text-center text-2xl font-serif tracking-wide py-3">
