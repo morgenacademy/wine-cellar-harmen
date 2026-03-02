@@ -1,11 +1,12 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useWine } from '../hooks/useWines'
 import type { WineDetail as WineDetailType } from '../hooks/useWines'
-import { useConsumeBottle, useMoveBottle } from '../hooks/useBottles'
+import { useMoveBottle, useReceiveBottle, useReceiveAllBottles } from '../hooks/useBottles'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import type { Wine } from '../types/database'
+import ConsumeSheet from '../components/ConsumeSheet'
 
 const colorBadge: Record<Wine['color'], string> = {
   red: 'bg-red-700 text-white',
@@ -55,10 +56,12 @@ export default function WineDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: wine, isLoading } = useWine(id ?? '')
-  const consumeBottle = useConsumeBottle()
   const moveBottle = useMoveBottle()
+  const receiveMutation = useReceiveBottle()
+  const receiveAll = useReceiveAllBottles()
   const { data: allSlots } = useAllSlots()
   const [movingBottleId, setMovingBottleId] = useState<string | null>(null)
+  const [consumingBottleId, setConsumingBottleId] = useState<string | null>(null)
 
   if (isLoading) return <div className="p-4 text-stone-500">Laden...</div>
   if (!wine) return <div className="p-4 text-stone-500">Wijn niet gevonden</div>
@@ -72,14 +75,9 @@ export default function WineDetail() {
     currentYear >= w.drink_from &&
     currentYear <= w.drink_until
 
-  const activeBottles = w.bottles.filter((b) => !b.consumed_at)
+  const activeBottles = w.bottles.filter((b) => !b.consumed_at && !b.pending)
+  const pendingBottles = w.bottles.filter((b) => !b.consumed_at && b.pending)
   const consumedBottles = w.bottles.filter((b) => b.consumed_at)
-
-  function handleConsume(bottleId: string) {
-    if (confirm('Weet je zeker dat je deze fles als gedronken wilt markeren?')) {
-      consumeBottle.mutate(bottleId)
-    }
-  }
 
   function handleMove(bottleId: string, slotId: string) {
     moveBottle.mutate({ bottleId, slotId }, {
@@ -88,7 +86,6 @@ export default function WineDetail() {
   }
 
   function navigateToSlot(slotId: string) {
-    // Find the slot info to determine which location to select
     const slotInfo = allSlots?.find((s) => s.id === slotId)
     if (slotInfo) {
       const locParam = slotInfo.locationType === 'kast' ? 'kast' : slotInfo.locationId
@@ -209,7 +206,9 @@ export default function WineDetail() {
       {/* Bottles */}
       <div className="space-y-3">
         <h2 className="font-semibold text-lg">
-          Flessen ({activeBottles.length} op voorraad{consumedBottles.length > 0 ? `, ${consumedBottles.length} gedronken` : ''})
+          Flessen ({activeBottles.length} op voorraad
+          {pendingBottles.length > 0 ? `, ${pendingBottles.length} besteld` : ''}
+          {consumedBottles.length > 0 ? `, ${consumedBottles.length} verwijderd` : ''})
         </h2>
 
         {/* Active bottles */}
@@ -247,11 +246,10 @@ export default function WineDetail() {
                     Verplaats
                   </button>
                   <button
-                    onClick={() => handleConsume(bottle.id)}
-                    disabled={consumeBottle.isPending}
-                    className="px-3 py-1 text-xs rounded-lg bg-red-800 text-white hover:bg-red-900 disabled:opacity-50"
+                    onClick={() => setConsumingBottleId(bottle.id)}
+                    className="px-3 py-1 text-xs rounded-lg bg-red-800 text-white hover:bg-red-900"
                   >
-                    Gedronken
+                    Verwijderen
                   </button>
                 </div>
               </div>
@@ -277,16 +275,52 @@ export default function WineDetail() {
           )
         })}
 
-        {/* Consumed bottles */}
+        {/* Pending bottles */}
+        {pendingBottles.length > 0 && (
+          <div className="space-y-1 mt-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-orange-600">Besteld</h3>
+              {pendingBottles.length > 1 && (
+                <button
+                  onClick={() => receiveAll.mutate(pendingBottles.map(b => b.id))}
+                  disabled={receiveAll.isPending}
+                  className="text-xs font-medium text-green-700 hover:text-green-800 disabled:opacity-50"
+                >
+                  Alle ontvangen ({pendingBottles.length})
+                </button>
+              )}
+            </div>
+            {pendingBottles.map((bottle) => (
+              <div
+                key={bottle.id}
+                className="bg-orange-50 rounded-lg p-3 text-sm border border-orange-200 flex items-center justify-between"
+              >
+                <span className="text-orange-700">Besteld</span>
+                <button
+                  onClick={() => receiveMutation.mutate(bottle.id)}
+                  disabled={receiveMutation.isPending}
+                  className="px-3 py-1 text-xs rounded-lg bg-green-700 text-white hover:bg-green-800 disabled:opacity-50"
+                >
+                  Ontvangen
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Consumed/removed bottles */}
         {consumedBottles.length > 0 && (
           <div className="space-y-1 mt-4">
-            <h3 className="text-sm font-medium text-stone-400">Gedronken</h3>
+            <h3 className="text-sm font-medium text-stone-400">Verwijderd</h3>
             {consumedBottles.map((bottle) => (
               <div
                 key={bottle.id}
                 className="bg-stone-50 rounded-lg p-3 text-sm text-stone-400 border border-stone-100"
               >
-                Gedronken op {new Date(bottle.consumed_at!).toLocaleDateString('nl-NL')}
+                {bottle.consume_reason === 'sold' ? '\uD83D\uDCB0 Verkocht' :
+                 bottle.consume_reason === 'gifted' ? '\uD83C\uDF81 Weggegeven' :
+                 bottle.consume_reason === 'lost' ? '\u2753 Verloren' :
+                 '\uD83C\uDF77 Gedronken'} op {new Date(bottle.consumed_at!).toLocaleDateString('nl-NL')}
               </div>
             ))}
           </div>
@@ -298,6 +332,15 @@ export default function WineDetail() {
           </p>
         )}
       </div>
+
+      {/* Consume sheet */}
+      {consumingBottleId && (
+        <ConsumeSheet
+          bottleId={consumingBottleId}
+          wineName={w.name}
+          onClose={() => setConsumingBottleId(null)}
+        />
+      )}
     </div>
   )
 }

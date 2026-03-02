@@ -10,7 +10,7 @@ type WineFilters = {
 }
 
 export type WineWithBottles = Wine & {
-  bottles: Pick<Bottle, 'id' | 'slot_id' | 'consumed_at'>[]
+  bottles: Pick<Bottle, 'id' | 'slot_id' | 'consumed_at' | 'pending'>[]
 }
 
 export type WineDetail = Wine & {
@@ -25,7 +25,7 @@ export function useWines(filters: WineFilters = {}) {
     queryFn: async () => {
       let query = supabase
         .from('wines')
-        .select('*, bottles(id, slot_id, consumed_at)')
+        .select('*, bottles(id, slot_id, consumed_at, pending)')
         .order('name')
 
       if (filters.color) query = query.eq('color', filters.color)

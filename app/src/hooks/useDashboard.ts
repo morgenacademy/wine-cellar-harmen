@@ -8,7 +8,7 @@ export function useDashboard() {
       // All active bottles with wine info
       const { data: allBottles } = await supabase
         .from('bottles')
-        .select('id, slot_id, consumed_at, wine:wines(id, name, color, country, region, vintage, price, estimated_value, drink_from, drink_until, varietal), slot:slots(location:locations(id, name, type))')
+        .select('id, slot_id, consumed_at, pending, wine:wines(id, name, color, country, region, vintage, price, estimated_value, drink_from, drink_until, varietal), slot:slots(location:locations(id, name, type))')
         .is('consumed_at', null)
 
       // Recently consumed (last 30 days)
@@ -21,7 +21,9 @@ export function useDashboard() {
         .order('consumed_at', { ascending: false })
         .limit(10)
 
-      const bottles = allBottles ?? []
+      const allActive = (allBottles ?? []).filter((b: any) => !b.pending)
+      const pendingCount = (allBottles ?? []).filter((b: any) => b.pending).length
+      const bottles = allActive
       const currentYear = new Date().getFullYear()
 
       // Aggregate location counts
@@ -97,6 +99,7 @@ export function useDashboard() {
 
       return {
         totalBottles: bottles.length,
+        pendingCount,
         locationCounts: Object.values(counts).sort((a, b) => b.count - a.count),
         unplaced,
         drinkSoon,

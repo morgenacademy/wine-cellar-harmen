@@ -38,10 +38,13 @@ export default function Dashboard() {
       <div className="bg-white rounded-xl p-6 shadow-sm border border-stone-200">
         <div className="text-4xl font-bold text-red-800">{data.totalBottles}</div>
         <div className="text-stone-500">flessen in voorraad</div>
+        {data.pendingCount > 0 && (
+          <div className="text-sm text-orange-500 mt-1">+ {data.pendingCount} besteld</div>
+        )}
         {stats.totalValue > 0 && (
           <div className="text-sm text-stone-400 mt-1 space-y-0.5">
-            <div>Totale kosten: €{stats.totalCost.toFixed(0)}</div>
-            <div>Geschatte waarde: €{stats.totalValue.toFixed(0)}</div>
+            <div>Totale kosten: &euro;{stats.totalCost.toFixed(0)}</div>
+            <div>Geschatte waarde: &euro;{stats.totalValue.toFixed(0)}</div>
           </div>
         )}
       </div>
@@ -173,13 +176,18 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Recent consumed */}
+      {/* Recent removed */}
       {data.recentConsumed.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-2">Recent gedronken</h2>
+          <h2 className="text-lg font-semibold mb-2">Recent verwijderd</h2>
           <div className="space-y-2">
             {data.recentConsumed.map((bottle: any) => (
               <div key={bottle.id} className="bg-white rounded-lg p-3 shadow-sm border border-stone-200 text-sm">
+                <span className="mr-1.5">
+                  {bottle.consume_reason === 'sold' ? '\uD83D\uDCB0' :
+                   bottle.consume_reason === 'gifted' ? '\uD83C\uDF81' :
+                   bottle.consume_reason === 'lost' ? '\u2753' : '\uD83C\uDF77'}
+                </span>
                 <span className="font-medium">{bottle.wine.name}</span>
                 {bottle.wine.vintage && <span className="text-stone-500 ml-1">{bottle.wine.vintage}</span>}
                 <span className="text-stone-400 ml-2">

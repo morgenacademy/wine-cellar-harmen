@@ -62,9 +62,9 @@ function App() {
         <BrowserRouter>
           <div className="min-h-screen bg-stone-50 text-stone-900">
             <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 flex justify-around py-2 md:static md:border-b md:border-t-0">
-              <NavLink to="/" end className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Lijst</NavLink>
-              <NavLink to="/wines" className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Wijnen</NavLink>
               <NavLink to="/dashboard" className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Dashboard</NavLink>
+              <NavLink to="/wines" className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Wijnen</NavLink>
+              <NavLink to="/" end className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Lijst</NavLink>
               <NavLink to="/locations" className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Locaties</NavLink>
               <NavLink to="/add" className={({isActive}) => isActive ? 'text-red-800 font-bold' : 'text-stone-500'}>Toevoegen</NavLink>
             </nav>

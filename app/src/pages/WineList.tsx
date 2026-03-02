@@ -42,13 +42,21 @@ function getSparklingColor(wine: WineWithBottles): string {
   return 'white'
 }
 
-function getActiveBottles(wine: WineWithBottles): number {
-  return wine.bottles.filter((b) => !b.consumed_at).length
+function getBottleCounts(wine: WineWithBottles): { active: number; pending: number } {
+  let active = 0
+  let pending = 0
+  for (const b of wine.bottles) {
+    if (b.consumed_at) continue
+    if (b.pending) pending++
+    else active++
+  }
+  return { active, pending }
 }
 
 type GroupedWine = {
   wine: WineWithBottles
   quantity: number
+  pendingCount: number
 }
 
 type RegionGroup = {
@@ -141,8 +149,11 @@ export default function WineList() {
     if (!allWines) return []
 
     const active = allWines
-      .map((w) => ({ wine: w, quantity: getActiveBottles(w) }))
-      .filter((w) => w.quantity > 0)
+      .map((w) => {
+        const counts = getBottleCounts(w)
+        return { wine: w, quantity: counts.active, pendingCount: counts.pending }
+      })
+      .filter((w) => w.quantity > 0 || w.pendingCount > 0)
 
     const sectionMap = new Map<Section, GroupedWine[]>()
     for (const gw of active) {
@@ -178,6 +189,10 @@ export default function WineList() {
   }, [allWines])
 
   const totalBottles = sections.reduce((sum, s) => sum + s.totalBottles, 0)
+  const totalPending = useMemo(() => {
+    if (!allWines) return 0
+    return allWines.reduce((sum, w) => sum + getBottleCounts(w).pending, 0)
+  }, [allWines])
 
   if (isLoading) return <div className="p-4 text-stone-500">Laden...</div>
 
@@ -185,7 +200,10 @@ export default function WineList() {
     <div className="max-w-3xl mx-auto">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold">Wijnlijst</h1>
-        <p className="text-sm text-stone-500 mt-1">{totalBottles} flessen op voorraad</p>
+        <p className="text-sm text-stone-500 mt-1">
+          {totalBottles} flessen op voorraad
+          {totalPending > 0 && <span className="text-orange-500"> + {totalPending} besteld</span>}
+        </p>
       </div>
 
       {sections.map((section) => (
@@ -252,7 +270,10 @@ export default function WineList() {
                             )}
                           </span>
                           <span className="text-sm text-stone-500 shrink-0 tabular-nums text-right">
-                            {gw.quantity}
+                            {gw.quantity > 0 ? gw.quantity : ''}
+                            {gw.pendingCount > 0 && (
+                              <span className="text-orange-500">{gw.quantity > 0 ? ' +' : ''}{gw.pendingCount} besteld</span>
+                            )}
                             {(gw.wine.drink_from || gw.wine.drink_until) && (
                               <span className="text-stone-400">
                                 , {gw.wine.drink_from ?? '?'}–{gw.wine.drink_until ?? '?'}

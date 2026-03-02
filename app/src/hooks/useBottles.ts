@@ -23,17 +23,66 @@ export function useAddBottles() {
 export function useConsumeBottle() {
   const qc = useQueryClient()
   return useMutation({
+    mutationFn: async (params: {
+      bottleId: string
+      reason: 'drunk' | 'sold' | 'lost' | 'gifted'
+      date: string
+    }) => {
+      const { error } = await supabase
+        .from('bottles')
+        .update({
+          consumed_at: params.date,
+          consume_reason: params.reason,
+          slot_id: null,
+        })
+        .eq('id', params.bottleId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wines'] })
+      qc.invalidateQueries({ queryKey: ['wine'] })
+      qc.invalidateQueries({ queryKey: ['location'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['slot-detail'] })
+      qc.invalidateQueries({ queryKey: ['unplaced-bottles'] })
+    },
+  })
+}
+
+export function useReceiveBottle() {
+  const qc = useQueryClient()
+  return useMutation({
     mutationFn: async (bottleId: string) => {
       const { error } = await supabase
         .from('bottles')
-        .update({ consumed_at: new Date().toISOString(), slot_id: null })
+        .update({ pending: false })
         .eq('id', bottleId)
       if (error) throw error
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['wines'] })
-      qc.invalidateQueries({ queryKey: ['location'] })
+      qc.invalidateQueries({ queryKey: ['wine'] })
       qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['unplaced-bottles'] })
+    },
+  })
+}
+
+export function useReceiveAllBottles() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (bottleIds: string[]) => {
+      const { error } = await supabase
+        .from('bottles')
+        .update({ pending: false })
+        .in('id', bottleIds)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['wines'] })
+      qc.invalidateQueries({ queryKey: ['wine'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      qc.invalidateQueries({ queryKey: ['unplaced-bottles'] })
     },
   })
 }

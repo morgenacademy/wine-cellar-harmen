@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { useConsumeBottle, useMoveBottle, useUnplaceBottle } from '../hooks/useBottles'
+import { useMoveBottle, useUnplaceBottle } from '../hooks/useBottles'
+import ConsumeSheet from './ConsumeSheet'
 import { useUpdateSlotLabel } from '../hooks/useLocations'
 import type { Slot, BottleWithWine, Location, Wine } from '../types/database'
 
@@ -36,6 +37,7 @@ function useUnplacedBottles() {
         .select('id, wine_id, wine:wines(*)')
         .is('slot_id', null)
         .is('consumed_at', null)
+        .eq('pending', false)
         .order('wine_id')
       if (error) throw error
       return data as unknown as UnplacedBottle[]
@@ -49,6 +51,7 @@ export default function SlotDetail({ slotId, onClose }: Props) {
   const [bottleSearch, setBottleSearch] = useState('')
   const [editingLabel, setEditingLabel] = useState(false)
   const [labelValue, setLabelValue] = useState('')
+  const [consumingBottle, setConsumingBottle] = useState<{ id: string; wineName: string } | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['slot-detail', slotId],
@@ -64,7 +67,6 @@ export default function SlotDetail({ slotId, onClose }: Props) {
     enabled: !!slotId,
   })
 
-  const consumeMutation = useConsumeBottle()
   const moveMutation = useMoveBottle()
   const unplaceMutation = useUnplaceBottle()
   const updateLabel = useUpdateSlotLabel()
@@ -256,11 +258,10 @@ export default function SlotDetail({ slotId, onClose }: Props) {
                       Uit vak
                     </button>
                     <button
-                      onClick={() => consumeMutation.mutate(group.bottles[0].id)}
-                      disabled={consumeMutation.isPending}
-                      className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-full bg-red-800 text-white hover:bg-red-900 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => setConsumingBottle({ id: group.bottles[0].id, wineName: group.wine?.name ?? 'Onbekende wijn' })}
+                      className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-full bg-red-800 text-white hover:bg-red-900 active:scale-95 transition-all"
                     >
-                      {consumeMutation.isPending ? '...' : 'Gedronken'}
+                      Gedronken
                     </button>
                   </div>
                 ))}
@@ -362,6 +363,14 @@ export default function SlotDetail({ slotId, onClose }: Props) {
           </button>
         </div>
       </div>
+
+      {consumingBottle && (
+        <ConsumeSheet
+          bottleId={consumingBottle.id}
+          wineName={consumingBottle.wineName}
+          onClose={() => setConsumingBottle(null)}
+        />
+      )}
     </>
   )
 }

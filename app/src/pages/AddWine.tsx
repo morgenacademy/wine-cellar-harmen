@@ -296,6 +296,7 @@ function CsvImport() {
   const [progress, setProgress] = useState(0)
   const [result, setResult] = useState<SyncResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isPending, setIsPending] = useState(false)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -360,6 +361,7 @@ function CsvImport() {
               const newBottles = Array.from({ length: toAdd }, () => ({
                 wine_id: existingWineId,
                 slot_id: null,
+                pending: isPending,
               }))
               await supabase.from('bottles').insert(newBottles)
               stats.addedBottles += toAdd
@@ -394,6 +396,7 @@ function CsvImport() {
               const bottles = Array.from({ length: item.quantity }, () => ({
                 wine_id: wine.id,
                 slot_id: null,
+                pending: isPending,
               }))
               await supabase.from('bottles').insert(bottles)
               stats.addedBottles += item.quantity
@@ -420,6 +423,7 @@ function CsvImport() {
             const bottles = Array.from({ length: item.quantity }, () => ({
               wine_id: wine.id,
               slot_id: null,
+              pending: isPending,
             }))
             await supabase.from('bottles').insert(bottles)
             stats.addedBottles += item.quantity
@@ -559,6 +563,16 @@ function CsvImport() {
               ? 'Wijnen worden gematcht op CellarTracker ID. Bestaande plaatsingen blijven behouden. Nieuwe flessen worden ongeplaatst toegevoegd.'
               : 'Alle wijnen worden als nieuw toegevoegd aan de collectie.'}
           </p>
+
+          <label className="flex items-center gap-2 text-sm text-stone-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isPending}
+              onChange={(e) => setIsPending(e.target.checked)}
+              className="rounded border-stone-300 text-orange-500 focus:ring-orange-500/30"
+            />
+            Dit zijn bestelde (pending) flessen
+          </label>
 
           <div className="flex gap-3">
             <button

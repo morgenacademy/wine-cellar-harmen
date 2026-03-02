@@ -42,6 +42,8 @@ export type Bottle = {
   slot_id: string | null
   added_at: string
   consumed_at: string | null
+  pending: boolean
+  consume_reason: 'drunk' | 'sold' | 'lost' | 'gifted' | null
 }
 
 // Joined types for queries
@@ -80,7 +82,7 @@ export type Database = {
       }
       bottles: {
         Row: Bottle
-        Insert: Omit<Bottle, 'id' | 'added_at' | 'consumed_at'> & { added_at?: string; consumed_at?: string | null }
+        Insert: Omit<Bottle, 'id' | 'added_at' | 'consumed_at' | 'pending' | 'consume_reason'> & { added_at?: string; consumed_at?: string | null; pending?: boolean; consume_reason?: string | null }
         Update: Partial<Bottle>
         Relationships: [
           {
